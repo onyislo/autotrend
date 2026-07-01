@@ -9,8 +9,7 @@
     }
   ],
   "env": {
-    "VITE_SUPABASE_URL": "@supabase-url",
-    "VITE_SUPABASE_ANON_KEY": "@supabase-anon-key",
-    "VITE_DERIV_APP_ID": "@deriv-app-id"
+    "VITE_DERIV_APP_ID": "@deriv-app-id",
+    "VITE_SITE_URL": "@site-url"
   }
 }
