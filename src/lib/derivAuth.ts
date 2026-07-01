@@ -15,20 +15,16 @@ export const loginWithDeriv = () => {
   // Store state in localStorage for verification
   localStorage.setItem('oauth_state', state);
   
-  // Build OAuth URL
+  // Build OAuth URL - Use the simpler approach
   const params = new URLSearchParams({
     app_id: DERIV_APP_ID,
     l: 'en',
-    brand: 'deriv',
-    date_first_contact: new Date().toISOString().split('T')[0],
-    signup_device: 'desktop',
-    utm_source: 'autotrend-x',
-    utm_medium: 'referral',
-    utm_campaign: 'signup',
-    state: state
+    brand: 'deriv'
   });
 
   const oauthUrl = `${DERIV_OAUTH_URL}?${params.toString()}`;
+  
+  console.log('Redirecting to Deriv OAuth:', oauthUrl);
   
   // Redirect to Deriv OAuth
   window.location.href = oauthUrl;
@@ -37,35 +33,45 @@ export const loginWithDeriv = () => {
 // Handle OAuth callback
 export const handleDerivCallback = () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const accounts = urlParams.get('acct1');
-  const token1 = urlParams.get('token1');
-  const cur1 = urlParams.get('cur1');
-  const state = urlParams.get('state');
   
-  // Verify state
-  const storedState = localStorage.getItem('oauth_state');
-  if (state !== storedState) {
-    throw new Error('Invalid OAuth state');
-  }
+  // Check for various possible parameter formats
+  const accounts = urlParams.get('acct1') || urlParams.get('accounts');
+  const token1 = urlParams.get('token1') || urlParams.get('token');
+  const cur1 = urlParams.get('cur1') || urlParams.get('currency') || 'USD';
   
-  // Clean up state
-  localStorage.removeItem('oauth_state');
+  console.log('OAuth callback params:', {
+    accounts,
+    token1: token1 ? 'present' : 'missing',
+    currency: cur1,
+    allParams: Object.fromEntries(urlParams.entries())
+  });
   
   if (accounts && token1) {
     // Store auth data
     const authData = {
       account: accounts,
       token: token1,
-      currency: cur1 || 'USD',
+      currency: cur1,
       loginTime: new Date().toISOString()
     };
     
     localStorage.setItem('deriv_auth', JSON.stringify(authData));
     
-    // Redirect to dashboard
-    window.location.href = '/dashboard';
+    console.log('Auth successful, redirecting to dashboard');
+    
+    // Clean URL and redirect to dashboard
+    window.history.replaceState({}, '', '/dashboard');
+    window.location.reload();
     
     return authData;
+  }
+  
+  // If we don't have the required params, check if we're already on a callback URL
+  if (window.location.pathname.includes('/auth/callback') || window.location.search.includes('acct')) {
+    console.error('OAuth callback missing required parameters:', {
+      url: window.location.href,
+      params: Object.fromEntries(urlParams.entries())
+    });
   }
   
   throw new Error('OAuth callback missing required parameters');
