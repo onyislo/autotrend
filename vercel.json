@@ -7,9 +7,5 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "env": {
-    "VITE_DERIV_APP_ID": "@deriv-app-id",
-    "VITE_SITE_URL": "@site-url"
-  }
+  ]
 }
