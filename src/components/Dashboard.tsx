@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, Menu, X, BarChart3, Bot, Calculator, TrendingUp } from 'lucide-react';
 
 interface User {
   email: string;
@@ -35,6 +35,8 @@ function Logo({ size = 32 }: { size?: number }) {
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'accumulators' | 'digits' | 'bots' | 'risefall'>('accumulators');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Simulate loading user data
@@ -72,10 +74,18 @@ export default function Dashboard() {
       <nav className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* Mobile Menu Button */}
+            <button
+              className="md:hidden text-gray-600 hover:text-gray-900 p-1"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu size={24} />
+            </button>
+            
             <Logo size={32} />
             <div>
               <h1 className="font-bold text-gray-900">Auto Trend X</h1>
-              <p className="text-xs text-gray-500">Trading Dashboard</p>
+              <p className="text-xs text-gray-500 hidden sm:block">Trading Dashboard</p>
             </div>
           </div>
           
@@ -97,36 +107,128 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Your Trading Workspace</h1>
-          <p className="text-gray-600">Professional trading tools powered by Deriv</p>
+      {/* Mobile Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
+          <div className="absolute left-0 top-0 h-full w-80 bg-white shadow-xl">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <Logo size={28} />
+                <span className="font-bold text-gray-900">Auto Trend X</span>
+              </div>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            {/* Trading Types Navigation */}
+            <div className="p-4">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Trading Tools</h3>
+              <div className="space-y-2">
+                {[
+                  { id: 'accumulators', label: 'Accumulators', icon: TrendingUp, desc: 'Growing stakes' },
+                  { id: 'digits', label: 'Digits', icon: Calculator, desc: 'Number prediction' },
+                  { id: 'bots', label: 'Trading Bots', icon: Bot, desc: 'Automated trading' },
+                  { id: 'risefall', label: 'Rise/Fall', icon: BarChart3, desc: 'Simple trading' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id as any);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <tab.icon size={20} />
+                    <div>
+                      <div className="font-medium">{tab.label}</div>
+                      <div className="text-xs text-gray-500">{tab.desc}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* User Info in Drawer */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {user?.currency} {user?.balance.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-gray-500">{user?.loginid}</div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
+      )}
 
-        {/* Trading Type Tabs */}
-        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Desktop Tabs - Hidden on Mobile */}
+        <div className="hidden md:flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
           {[
-            { id: 'accumulators', label: 'Accumulators', desc: 'Growing stakes' },
-            { id: 'bots', label: 'Trading Bots', desc: 'Automated strategies' },
-            { id: 'risefall', label: 'Rise/Fall', desc: 'Simple trading' },
-            { id: 'digits', label: 'Digits', desc: 'Number prediction' }
+            { id: 'accumulators', label: 'Accumulators', icon: TrendingUp, desc: 'Growing stakes' },
+            { id: 'digits', label: 'Digits', icon: Calculator, desc: 'Number prediction' },
+            { id: 'bots', label: 'Trading Bots', icon: Bot, desc: 'Automated trading' },
+            { id: 'risefall', label: 'Rise/Fall', icon: BarChart3, desc: 'Simple trading' }
           ].map(tab => (
             <button
               key={tab.id}
-              className="flex flex-col items-center gap-1 px-4 py-3 rounded-md text-sm font-medium transition-colors bg-white text-emerald-600 shadow-sm border-2 border-emerald-200"
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-4 py-3 rounded-md text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-white text-emerald-600 shadow-sm border border-emerald-200'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
-              <span>{tab.label}</span>
-              <span className="text-xs text-gray-500">{tab.desc}</span>
+              <tab.icon size={16} />
+              <div className="text-left">
+                <div>{tab.label}</div>
+                <div className="text-xs text-gray-400">{tab.desc}</div>
+              </div>
             </button>
           ))}
         </div>
 
-        {/* Your Custom AutoTrend Bot App */}
+        {/* Mobile Active Tab Indicator */}
+        <div className="md:hidden mb-4 p-3 bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center gap-2">
+            {activeTab === 'accumulators' && <TrendingUp size={16} className="text-emerald-600" />}
+            {activeTab === 'digits' && <Calculator size={16} className="text-emerald-600" />}
+            {activeTab === 'bots' && <Bot size={16} className="text-emerald-600" />}
+            {activeTab === 'risefall' && <BarChart3 size={16} className="text-emerald-600" />}
+            <span className="font-medium text-gray-900">
+              {activeTab === 'accumulators' && 'Accumulators Trading'}
+              {activeTab === 'digits' && 'Digits Trading'}
+              {activeTab === 'bots' && 'Bot Trading'}
+              {activeTab === 'risefall' && 'Rise/Fall Trading'}
+            </span>
+          </div>
+        </div>
+
+        {/* Trading App Display */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" style={{ height: '800px' }}>
           <iframe
             src="https://autotrendx-onyislos-projects.vercel.app"
             className="w-full h-full border-0"
-            title="AutoTrend X Trading Bot"
+            title={`AutoTrend X ${activeTab} Trading`}
             allow="camera; microphone; geolocation; fullscreen; payment"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
           />
