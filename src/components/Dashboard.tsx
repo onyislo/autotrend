@@ -100,15 +100,33 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="mb-4">
           <h1 className="text-2xl font-bold text-gray-900">Your Trading Workspace</h1>
-          <p className="text-gray-600">Full access to Deriv's professional trading platform</p>
+          <p className="text-gray-600">Professional trading tools powered by Deriv</p>
         </div>
 
-        {/* Embedded Deriv App */}
+        {/* Trading Type Tabs */}
+        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+          {[
+            { id: 'accumulators', label: 'Accumulators', desc: 'Growing stakes' },
+            { id: 'bots', label: 'Trading Bots', desc: 'Automated strategies' },
+            { id: 'risefall', label: 'Rise/Fall', desc: 'Simple trading' },
+            { id: 'digits', label: 'Digits', desc: 'Number prediction' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              className="flex flex-col items-center gap-1 px-4 py-3 rounded-md text-sm font-medium transition-colors bg-white text-emerald-600 shadow-sm border-2 border-emerald-200"
+            >
+              <span>{tab.label}</span>
+              <span className="text-xs text-gray-500">{tab.desc}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Your Custom AutoTrend Bot App */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" style={{ height: '800px' }}>
           <iframe
-            src="https://app.deriv.com"
+            src="https://autotrendx-onyislos-projects.vercel.app"
             className="w-full h-full border-0"
-            title="Deriv Trading Platform"
+            title="AutoTrend X Trading Bot"
             allow="camera; microphone; geolocation; fullscreen; payment"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
           />
