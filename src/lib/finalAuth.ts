@@ -1,28 +1,25 @@
-// REAL DERIV LOGIN - NO DEMO, NO REDIRECT ISSUES
+// REAL DERIV LOGIN - FORCE SPECIFIC CALLBACK URL
 const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33130Dyu0P9Lr05ZQ8Z9';
 
 export const loginWithDeriv = () => {
   console.log('🔐 Starting REAL Deriv login...');
   
-  // Build the OAuth URL with correct callback
-  const isDev = window.location.hostname === 'localhost';
-  const callbackUrl = isDev 
-    ? 'http://localhost:5173/auth/callback'
-    : 'https://autotrendx.qzz.io/auth/callback';
+  // FORCE the specific callback URL - don't let Deriv choose
+  const callbackUrl = 'https://autotrendx.qzz.io/auth/callback';
   
   const oauthParams = new URLSearchParams({
     app_id: DERIV_APP_ID,
     l: 'en',
     brand: 'deriv',
-    redirect_uri: callbackUrl
+    redirect_uri: callbackUrl  // EXPLICITLY specify which callback to use
   });
   
   const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?${oauthParams.toString()}`;
   
   console.log('🔗 OAuth URL:', oauthUrl);
-  console.log('📍 Callback URL:', callbackUrl);
+  console.log('📍 FORCED Callback URL:', callbackUrl);
   
-  // Direct redirect to Deriv (this should work with your configured callback URL)
+  // Direct redirect to Deriv with SPECIFIC callback
   window.location.href = oauthUrl;
 };
 

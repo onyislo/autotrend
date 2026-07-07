@@ -133,47 +133,83 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'register'; onClose: () 
             )}
           </button>
 
-          {/* Manual Login Helper */}
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-            <p className="font-medium mb-2">🔧 Alternative Login Method:</p>
-            <p className="mb-2">If popup doesn't work:</p>
-            <ol className="list-decimal ml-4 space-y-1">
-              <li>Click the button above to open Deriv login</li>
-              <li>Complete login on Deriv</li>
-              <li>Copy the final URL from address bar</li>
-              <li>Come back here and paste it below:</li>
-            </ol>
-            <input 
-              type="text" 
-              placeholder="Paste Deriv URL with tokens here..."
-              className="w-full mt-2 p-2 border border-gray-300 rounded text-xs"
-              onChange={(e) => {
-                const url = e.target.value;
-                if (url.includes('acct1=') && url.includes('token1=')) {
-                  try {
-                    const urlObj = new URL(url);
-                    const params = urlObj.searchParams;
-                    const account = params.get('acct1');
-                    const token = params.get('token1');
-                    const currency = params.get('cur1') || 'USD';
-                    
-                    if (account && token) {
-                      const authData = {
-                        account,
-                        token,
-                        currency,
-                        timestamp: Date.now()
-                      };
-                      localStorage.setItem('deriv_auth', JSON.stringify(authData));
-                      sessionStorage.setItem('auth_status', 'authenticated');
-                      window.location.href = '/dashboard';
+          {/* Manual Token Extraction Tool */}
+          <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+            <div className="flex items-center gap-2 text-yellow-700 mb-2">
+              <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+              </svg>
+              <span className="text-sm font-medium">⚡ Emergency Login Method</span>
+            </div>
+            
+            <p className="text-xs text-yellow-700 mb-3">
+              If redirect doesn't work, get your tokens manually:
+            </p>
+            
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  const authUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=33130Dyu0P9Lr05ZQ8Z9&l=en&brand=deriv&redirect_uri=https://autotrendx.qzz.io/auth/callback`;
+                  window.open(authUrl, '_blank');
+                }}
+                className="w-full bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2 px-3 rounded-md"
+              >
+                🔗 Open Deriv Login (New Tab)
+              </button>
+              
+              <div className="text-xs text-yellow-600">
+                <strong>Steps:</strong>
+                <ol className="list-decimal ml-4 mt-1 space-y-1">
+                  <li>Login in the new tab</li>
+                  <li>Look for URL with "acct1=" and "token1="</li>
+                  <li>Copy that entire URL and paste below:</li>
+                </ol>
+              </div>
+              
+              <input 
+                type="text" 
+                placeholder="Paste the full URL with tokens here..."
+                className="w-full p-2 border border-yellow-300 rounded text-xs bg-white"
+                onChange={(e) => {
+                  const url = e.target.value.trim();
+                  console.log('Checking URL:', url);
+                  
+                  if (url.includes('acct1=') && url.includes('token1=')) {
+                    try {
+                      const urlObj = new URL(url);
+                      const params = urlObj.searchParams;
+                      const account = params.get('acct1');
+                      const token = params.get('token1');
+                      const currency = params.get('cur1') || 'USD';
+                      
+                      console.log('Extracted tokens:', { account, token, currency });
+                      
+                      if (account && token) {
+                        const authData = {
+                          account,
+                          token,
+                          currency,
+                          timestamp: Date.now(),
+                          loginTime: new Date().toISOString(),
+                          isRealAccount: true,
+                          manualLogin: true
+                        };
+                        
+                        localStorage.setItem('deriv_auth', JSON.stringify(authData));
+                        sessionStorage.setItem('auth_status', 'authenticated');
+                        
+                        console.log('✅ Manual login successful!');
+                        onClose(); // Close the modal
+                        window.location.href = '/dashboard';
+                      }
+                    } catch (err) {
+                      console.error('Invalid URL format:', err);
                     }
-                  } catch (err) {
-                    console.error('Invalid URL format');
                   }
-                }
-              }}
-            />
+                }}
+              />
+            </div>
           </div>
 
           <div className="mt-6 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
