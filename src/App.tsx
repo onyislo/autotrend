@@ -87,8 +87,9 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'register'; onClose: () 
 
   const handleDerivLogin = () => {
     setLoading(true);
-    loginWithDeriv(); // Real Deriv login with redirect
+    loginWithDeriv();
   };
+
   return (
     <AnimatePresence>
       <motion.div className="fixed inset-0 z-[90] flex items-center justify-center px-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -132,6 +133,121 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'register'; onClose: () 
               </>
             )}
           </button>
+
+          <p className="text-center text-xs text-gray-400 mt-6">
+            By continuing, you agree to Deriv's terms of service and privacy policy.
+          </p>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+    <AnimatePresence>
+      <motion.div className="fixed inset-0 z-[90] flex items-center justify-center px-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+        <motion.div
+          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8"
+          initial={{ y: 32, opacity: 0, scale: 0.97 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 20, opacity: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+        >
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          <div className="flex items-center gap-2 mb-6">
+            <Logo size={32} />
+            <span className="font-bold text-gray-900">Auto Trend X</span>
+          </div>
+          
+          {!manualMode ? (
+            <>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-1">
+                {mode === 'login' ? 'Welcome back' : 'Start trading today'}
+              </h2>
+              <p className="text-sm text-gray-500 mb-6">
+                {mode === 'login' 
+                  ? 'Sign in with your Deriv account to access your trading workspace.' 
+                  : 'Create a free Deriv account and start trading with professional tools. Anyone can join!'
+                }
+              </p>
+
+              <button 
+                onClick={handleDerivLogin}
+                disabled={loading}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors mt-2 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Connecting to Deriv...
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink size={16} />
+                    Login with Deriv
+                  </>
+                )}
+              </button>
+
+              <div className="mt-4 text-center">
+                <button 
+                  onClick={() => setManualMode(true)}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 underline"
+                >
+                  Having redirect issues? Use manual login
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Manual Login</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Get your login tokens directly from Deriv:
+              </p>
+              
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg border">
+                  <p className="text-sm font-medium text-blue-800 mb-2">Step 1: Get Your Tokens</p>
+                  <button
+                    onClick={() => {
+                      window.open(`https://oauth.deriv.com/oauth2/authorize?app_id=33LvvK8qit4Q2yXrRMiPAY&l=en&brand=deriv&redirect_uri=https://autotrendx.qzz.io/auth/callback`, '_blank');
+                    }}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium"
+                  >
+                    🔗 Open Deriv Login (New Tab)
+                  </button>
+                </div>
+
+                <div className="bg-yellow-50 p-4 rounded-lg border">
+                  <p className="text-sm font-medium text-yellow-800 mb-2">Step 2: Copy the Redirect URL</p>
+                  <p className="text-xs text-yellow-700 mb-3">
+                    After login, Deriv will try to redirect. Copy the FULL URL from your browser (even if page doesn't load)
+                  </p>
+                  <input 
+                    type="text" 
+                    value={tokenUrl}
+                    onChange={(e) => setTokenUrl(e.target.value)}
+                    placeholder="Paste the full redirect URL here..."
+                    className="w-full p-3 border border-yellow-300 rounded-lg text-sm bg-white"
+                  />
+                </div>
+
+                <button
+                  onClick={handleManualLogin}
+                  disabled={!tokenUrl.trim()}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl"
+                >
+                  Login with Tokens
+                </button>
+
+                <button
+                  onClick={() => setManualMode(false)}
+                  className="w-full text-gray-500 text-sm py-2"
+                >
+                  ← Back to automatic login
+                </button>
+              </div>
+            </>
+          )}
 
           <p className="text-center text-xs text-gray-400 mt-6">
             By continuing, you agree to Deriv's terms of service and privacy policy.

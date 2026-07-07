@@ -1,96 +1,57 @@
-// DERIV OAUTH - MANUAL REDIRECT SOLUTION
+// CORRECT DERIV OAUTH FLOW - BASED ON DOCUMENTATION
 const DERIV_APP_ID = '33LvvK8qit4Q2yXrRMiPAY';
 
 export const loginWithDeriv = () => {
-  // Method 1: Direct OAuth (what we've been trying)
-  const directOAuth = () => {
-    const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=en&brand=deriv&redirect_uri=https://autotrendx.qzz.io/auth/callback`;
-    console.log('🔄 Trying direct OAuth:', oauthUrl);
-    window.location.href = oauthUrl;
-  };
-
-  // Method 2: Alternative - Use Deriv's app registration flow
-  const alternativeFlow = () => {
-    const appUrl = `https://app.deriv.com/redirect?app_id=${DERIV_APP_ID}&redirect_uri=https://autotrendx.qzz.io/auth/callback`;
-    console.log('🔄 Trying alternative flow:', appUrl);
-    window.location.href = appUrl;
-  };
-
-  // Method 3: Force redirect with explicit parameters
-  const forceRedirect = () => {
-    const params = {
-      app_id: DERIV_APP_ID,
-      l: 'en',
-      brand: 'deriv',
-      redirect_uri: 'https://autotrendx.qzz.io/auth/callback',
-      response_type: 'token'  // Changed to token instead of code
-    };
-    
-    const queryString = Object.entries(params)
-      .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-      .join('&');
-    
-    const url = `https://oauth.deriv.com/oauth2/authorize?${queryString}`;
-    console.log('🔄 Force redirect URL:', url);
-    
-    // Open in same window with replace to avoid back button issues
-    window.location.replace(url);
-  };
-
-  console.log('🚀 Starting Deriv login with force redirect...');
-  forceRedirect();
+  // Use the documented OAuth flow with proper parameters
+  const params = new URLSearchParams({
+    app_id: DERIV_APP_ID,
+    l: 'en',
+    brand: 'deriv'
+  });
+  
+  // Add redirect_uri separately to ensure proper encoding
+  params.append('redirect_uri', 'https://autotrendx.qzz.io/auth/callback');
+  
+  const authUrl = `https://oauth.deriv.com/oauth2/authorize?${params.toString()}`;
+  
+  console.log('🚀 Starting OAuth with URL:', authUrl);
+  
+  // Use location.assign instead of href for better compatibility
+  window.location.assign(authUrl);
 };
 
 export const handleCallback = () => {
-  console.log('🔐 Callback handler triggered!');
-  console.log('📍 Current URL:', window.location.href);
-  console.log('🔍 Current Path:', window.location.pathname);
-  console.log('📋 Query String:', window.location.search);
-  console.log('🔗 Hash Fragment:', window.location.hash);
+  console.log('🔐 Processing OAuth callback...');
+  console.log('Current URL:', window.location.href);
   
-  // Check URL params first (traditional method)
-  const params = new URLSearchParams(window.location.search);
-  let account = params.get('acct1');
-  let token = params.get('token1');
-  let currency = params.get('cur1') || 'USD';
-
-  // If no params in query string, check hash fragment (for token response_type)
-  if (!account || !token) {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    account = hashParams.get('acct1') || account;
-    token = hashParams.get('token1') || token;
-    currency = hashParams.get('cur1') || currency || 'USD';
-  }
-
-  console.log('🎫 Extracted params:', { 
-    account, 
-    token: token ? '***' + token.slice(-4) : null, 
-    currency,
-    source: params.get('acct1') ? 'query' : 'hash'
-  });
-
+  const urlParams = new URLSearchParams(window.location.search);
+  const account = urlParams.get('acct1');
+  const token = urlParams.get('token1');
+  const currency = urlParams.get('cur1') || 'USD';
+  
+  console.log('Found tokens:', { account: !!account, token: !!token, currency });
+  
   if (account && token) {
-    console.log('✅ Valid tokens received - Storing auth data');
-    localStorage.setItem('deriv_auth', JSON.stringify({
-      account, token, currency, timestamp: Date.now()
-    }));
-    sessionStorage.setItem('auth_status', 'authenticated');
-    sessionStorage.removeItem('oauth_attempt');
+    console.log('✅ Storing authentication data...');
     
+    const authData = {
+      account,
+      token, 
+      currency,
+      timestamp: Date.now()
+    };
+    
+    localStorage.setItem('deriv_auth', JSON.stringify(authData));
+    sessionStorage.setItem('auth_status', 'authenticated');
+    
+    // Redirect to dashboard
     console.log('🎯 Redirecting to dashboard...');
-    // Clean the URL and redirect
-    window.history.replaceState({}, '', '/dashboard');
-    window.location.reload();
+    window.location.href = '/dashboard';
     return true;
-  } else {
-    console.log('❌ No valid tokens found in callback');
-    console.log('🔍 Available query params:', Array.from(params.entries()));
-    if (window.location.hash) {
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      console.log('🔍 Available hash params:', Array.from(hashParams.entries()));
-    }
-    return false;
   }
+  
+  console.log('❌ No valid authentication tokens found');
+  return false;
 };
 
 export const isLoggedIn = (): boolean => {
