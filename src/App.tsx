@@ -54,7 +54,6 @@ const features = [
   { icon: <Zap size={28} />, title: 'Instant Signals', desc: 'Get trade alerts across indices, forex, and crypto markets.' },
 ];
 
-/* ── Splash ── */
 function Splash() {
   return (
     <motion.div
@@ -81,7 +80,6 @@ function Splash() {
   );
 }
 
-/* ── Auth Modal ── */
 function AuthModal({ mode, onClose }: { mode: 'login' | 'register'; onClose: () => void }) {
   const [loading, setLoading] = useState(false);
 
@@ -142,87 +140,7 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'register'; onClose: () 
     </AnimatePresence>
   );
 }
-                    Connecting to Deriv...
-                  </>
-                ) : (
-                  <>
-                    <ExternalLink size={16} />
-                    Login with Deriv
-                  </>
-                )}
-              </button>
 
-              <div className="mt-4 text-center">
-                <button 
-                  onClick={() => setManualMode(true)}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 underline"
-                >
-                  Having redirect issues? Use manual login
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Manual Login</h2>
-              <p className="text-sm text-gray-500 mb-4">
-                Get your login tokens directly from Deriv:
-              </p>
-              
-              <div className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg border">
-                  <p className="text-sm font-medium text-blue-800 mb-2">Step 1: Get Your Tokens</p>
-                  <button
-                    onClick={() => {
-                      window.open(`https://oauth.deriv.com/oauth2/authorize?app_id=33LvvK8qit4Q2yXrRMiPAY&l=en&brand=deriv&redirect_uri=https://autotrendx.qzz.io/auth/callback`, '_blank');
-                    }}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium"
-                  >
-                    🔗 Open Deriv Login (New Tab)
-                  </button>
-                </div>
-
-                <div className="bg-yellow-50 p-4 rounded-lg border">
-                  <p className="text-sm font-medium text-yellow-800 mb-2">Step 2: Copy the Redirect URL</p>
-                  <p className="text-xs text-yellow-700 mb-3">
-                    After login, Deriv will try to redirect. Copy the FULL URL from your browser (even if page doesn't load)
-                  </p>
-                  <input 
-                    type="text" 
-                    value={tokenUrl}
-                    onChange={(e) => setTokenUrl(e.target.value)}
-                    placeholder="Paste the full redirect URL here..."
-                    className="w-full p-3 border border-yellow-300 rounded-lg text-sm bg-white"
-                  />
-                </div>
-
-                <button
-                  onClick={handleManualLogin}
-                  disabled={!tokenUrl.trim()}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl"
-                >
-                  Login with Tokens
-                </button>
-
-                <button
-                  onClick={() => setManualMode(false)}
-                  className="w-full text-gray-500 text-sm py-2"
-                >
-                  ← Back to automatic login
-                </button>
-              </div>
-            </>
-          )}
-
-          <p className="text-center text-xs text-gray-400 mt-6">
-            By continuing, you agree to Deriv's terms of service and privacy policy.
-          </p>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-}
-
-/* ── Mobile Drawer ── */
 function Drawer({ open, onClose, onLogin, onRegister }: { open: boolean; onClose: () => void; onLogin: () => void; onRegister: () => void }) {
   return (
     <AnimatePresence>
@@ -259,7 +177,6 @@ function Drawer({ open, onClose, onLogin, onRegister }: { open: boolean; onClose
   );
 }
 
-/* ── App ── */
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [drawer, setDrawer] = useState(false);
@@ -273,12 +190,8 @@ export default function App() {
   return (
     <>
       <AnimatePresence>{loading && <Splash />}</AnimatePresence>
-
       <Drawer open={drawer} onClose={() => setDrawer(false)} onLogin={() => setModal('login')} onRegister={() => setModal('register')} />
-
-      <AnimatePresence>
-        {modal && <AuthModal mode={modal} onClose={() => setModal(null)} />}
-      </AnimatePresence>
+      <AnimatePresence>{modal && <AuthModal mode={modal} onClose={() => setModal(null)} />}</AnimatePresence>
 
       <motion.div
         className="min-h-screen bg-white text-gray-900 font-sans"
@@ -289,7 +202,6 @@ export default function App() {
         {/* Navbar */}
         <nav className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-            {/* Mobile: hamburger left */}
             <div className="flex items-center gap-3">
               <button className="md:hidden text-gray-600 hover:text-gray-900 p-1" onClick={() => setDrawer(true)}>
                 <Menu size={22} />
@@ -302,19 +214,13 @@ export default function App() {
                 </div>
               </div>
             </div>
-
-            {/* Desktop nav */}
             <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
               {NAV.map(n => <a key={n} href="#" className="hover:text-emerald-600 transition-colors">{n}</a>)}
             </div>
-
-            {/* Desktop auth */}
             <div className="hidden md:flex items-center gap-3">
               <button onClick={() => setModal('login')} className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2 transition-colors">Log In</button>
               <button onClick={() => setModal('register')} className="text-sm font-semibold bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg transition-colors">Get Started</button>
             </div>
-
-            {/* Mobile auth shortcut */}
             <button className="md:hidden text-sm font-semibold bg-emerald-500 text-white px-4 py-1.5 rounded-lg" onClick={() => setModal('register')}>Join</button>
           </div>
         </nav>
