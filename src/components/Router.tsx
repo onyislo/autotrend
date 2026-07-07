@@ -1,67 +1,65 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import App from '../App';
 import Dashboard from './Dashboard';
-import { handleDerivCallback, isAuthenticated } from '../lib/derivAuth';
-
-type Route = 'landing' | 'dashboard' | 'auth-callback';
+import { handleCallback, isLoggedIn } from '../lib/finalAuth';
 
 export default function Router() {
-  const [currentRoute, setCurrentRoute] = useState<Route>('landing');
+  const [showDashboard, setShowDashboard] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const path = window.location.pathname;
-    const search = window.location.search;
-
-    // Handle different routes
-    if (path === '/auth/callback' || search.includes('acct1=')) {
-      // OAuth callback from Deriv
-      try {
-        handleDerivCallback();
-        setCurrentRoute('dashboard');
-      } catch (error) {
-        console.error('OAuth callback error:', error);
-        // Redirect to landing with error
-        window.history.replaceState({}, '', '/');
-        setCurrentRoute('landing');
-      }
-    } else if (path === '/dashboard') {
-      // Dashboard route
-      if (isAuthenticated()) {
-        setCurrentRoute('dashboard');
-      } else {
-        // Not authenticated, redirect to landing
-        window.history.replaceState({}, '', '/');
-        setCurrentRoute('landing');
-      }
-    } else {
-      // Landing page (default)
-      if (isAuthenticated()) {
-        // Already authenticated, go to dashboard
+    const currentPath = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    
+    console.log('Router: Current path:', currentPath);
+    console.log('Router: URL params:', params.toString());
+    
+    // Handle OAuth callback specifically
+    if (currentPath === '/auth/callback' || params.has('acct1') && params.has('token1')) {
+      console.log('Processing Deriv OAuth callback...');
+      const success = handleCallback();
+      if (success) {
+        console.log('Callback successful, redirecting to dashboard');
+        // Redirect to dashboard after successful login
         window.history.replaceState({}, '', '/dashboard');
-        setCurrentRoute('dashboard');
+        setShowDashboard(true);
       } else {
-        setCurrentRoute('landing');
+        console.log('Callback failed, redirecting to home');
+        // Failed login, go back to home
+        window.history.replaceState({}, '', '/');
+        setShowDashboard(false);
       }
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
-  }, []);
-
-  // Handle browser back/forward buttons
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname;
-      
-      if (path === '/dashboard' && isAuthenticated()) {
-        setCurrentRoute('dashboard');
+    // Check if we're on dashboard URL
+    if (currentPath === '/dashboard') {
+      const loggedIn = isLoggedIn();
+      console.log('On dashboard, logged in:', loggedIn);
+      if (loggedIn) {
+        setShowDashboard(true);
       } else {
-        setCurrentRoute('landing');
+        // Not logged in, redirect to home
+        console.log('Not logged in, redirecting to home');
+        window.history.replaceState({}, '', '/');
+        setShowDashboard(false);
       }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    } else {
+      // On landing page or other URLs
+      const loggedIn = isLoggedIn();
+      console.log('On landing page, logged in:', loggedIn);
+      if (loggedIn && currentPath !== '/') {
+        // Already logged in and not on home, go to dashboard
+        console.log('Already logged in, redirecting to dashboard');
+        window.history.replaceState({}, '', '/dashboard');
+        setShowDashboard(true);
+      } else {
+        setShowDashboard(false);
+      }
+    }
+    
+    setLoading(false);
   }, []);
 
   if (loading) {
@@ -75,12 +73,5 @@ export default function Router() {
     );
   }
 
-  // Render current route
-  switch (currentRoute) {
-    case 'dashboard':
-      return <Dashboard />;
-    case 'landing':
-    default:
-      return <App />;
-  }
+  return showDashboard ? <Dashboard /> : <App />;
 }

@@ -1,86 +1,76 @@
-// Deriv OAuth Configuration
-const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '1089'; // Default demo app ID
-const DERIV_OAUTH_URL = 'https://oauth.deriv.com/oauth2/authorize';
-
-// Generate random state for OAuth security
-const generateState = () => {
-  return Math.random().toString(36).substring(2, 15) + 
-         Math.random().toString(36).substring(2, 15);
-};
+// Simple Deriv OAuth - WORKING VERSION
+const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33130Dyu0P9Lr05ZQ8Z9';
 
 // Redirect to Deriv OAuth
 export const loginWithDeriv = () => {
-  const state = generateState();
+  const currentUrl = window.location.origin;
+  const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=en&brand=deriv`;
   
-  // Store state in localStorage for verification
-  localStorage.setItem('oauth_state', state);
+  // Store where we came from
+  localStorage.setItem('deriv_return_url', `${currentUrl}/dashboard`);
   
-  // Build OAuth URL - Use the simpler approach
-  const params = new URLSearchParams({
-    app_id: DERIV_APP_ID,
-    l: 'en',
-    brand: 'deriv'
-  });
-
-  const oauthUrl = `${DERIV_OAUTH_URL}?${params.toString()}`;
-  
-  console.log('Redirecting to Deriv OAuth:', oauthUrl);
-  
-  // Redirect to Deriv OAuth
+  console.log('Redirecting to:', oauthUrl);
   window.location.href = oauthUrl;
 };
 
-// Handle OAuth callback
+// Handle OAuth callback - SIMPLE VERSION
 export const handleDerivCallback = () => {
-  const urlParams = new URLSearchParams(window.location.search);
+  const url = new URL(window.location.href);
+  const params = new URLSearchParams(url.search);
   
-  // Check for various possible parameter formats
-  const accounts = urlParams.get('acct1') || urlParams.get('accounts');
-  const token1 = urlParams.get('token1') || urlParams.get('token');
-  const cur1 = urlParams.get('cur1') || urlParams.get('currency') || 'USD';
+  // Get tokens from URL parameters
+  const account = params.get('acct1') || params.get('account');
+  const token = params.get('token1') || params.get('token');
+  const currency = params.get('cur1') || params.get('currency') || 'USD';
   
-  console.log('OAuth callback params:', {
-    accounts,
-    token1: token1 ? 'present' : 'missing',
-    currency: cur1,
-    allParams: Object.fromEntries(urlParams.entries())
-  });
+  console.log('Callback params:', { account, token: token ? 'present' : 'missing' });
   
-  if (accounts && token1) {
-    // Store auth data
+  if (account && token) {
+    // Save auth data
     const authData = {
-      account: accounts,
-      token: token1,
-      currency: cur1,
-      loginTime: new Date().toISOString()
+      account,
+      token,
+      currency,
+      loginTime: Date.now()
     };
     
     localStorage.setItem('deriv_auth', JSON.stringify(authData));
     
-    console.log('Auth successful, redirecting to dashboard');
+    // Redirect to dashboard
+    const returnUrl = localStorage.getItem('deriv_return_url') || '/dashboard';
+    localStorage.removeItem('deriv_return_url');
     
-    // Clean URL and redirect to dashboard
-    window.history.replaceState({}, '', '/dashboard');
-    window.location.reload();
-    
+    window.location.href = returnUrl;
     return authData;
   }
   
-  // If we don't have the required params, check if we're already on a callback URL
-  if (window.location.pathname.includes('/auth/callback') || window.location.search.includes('acct')) {
-    console.error('OAuth callback missing required parameters:', {
-      url: window.location.href,
-      params: Object.fromEntries(urlParams.entries())
-    });
+  // If no tokens, we might be on a callback URL but without proper params
+  if (url.pathname.includes('dashboard') || url.search.includes('acct')) {
+    console.log('On callback URL but missing tokens - redirecting to landing');
+    window.location.href = '/';
+    return null;
   }
   
-  throw new Error('OAuth callback missing required parameters');
+  return null;
 };
 
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
   const authData = localStorage.getItem('deriv_auth');
-  return authData !== null;
+  if (!authData) return false;
+  
+  try {
+    const data = JSON.parse(authData);
+    // Check if token is less than 24 hours old
+    const isValid = data.token && (Date.now() - data.loginTime < 24 * 60 * 60 * 1000);
+    if (!isValid) {
+      localStorage.removeItem('deriv_auth');
+    }
+    return isValid;
+  } catch {
+    localStorage.removeItem('deriv_auth');
+    return false;
+  }
 };
 
 // Get user auth data
@@ -92,6 +82,7 @@ export const getAuthData = () => {
 // Logout user
 export const logout = () => {
   localStorage.removeItem('deriv_auth');
+  localStorage.removeItem('deriv_return_url');
   window.location.href = '/';
 };
 
