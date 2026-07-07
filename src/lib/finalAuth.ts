@@ -1,5 +1,5 @@
 // SIMPLE FIX - JUST MAKE THE REDIRECT WORK
-const DERIV_APP_ID = '33130Dyu0P9Lr05ZQ8Z9';
+const DERIV_APP_ID = '33LvvK8qit4Q2yXrRMiPAY';
 
 export const loginWithDeriv = () => {
   // Simple redirect with explicit callback
