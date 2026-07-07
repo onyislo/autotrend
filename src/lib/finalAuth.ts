@@ -1,23 +1,47 @@
-// CORRECT DERIV OAUTH FLOW - BASED ON DOCUMENTATION
+// DERIV WEBSOCKET API APPROACH - MORE RELIABLE
 const DERIV_APP_ID = '33LvvK8qit4Q2yXrRMiPAY';
 
 export const loginWithDeriv = () => {
-  // Use the documented OAuth flow with proper parameters
-  const params = new URLSearchParams({
-    app_id: DERIV_APP_ID,
-    l: 'en',
-    brand: 'deriv'
-  });
+  // Instead of OAuth redirect, open Deriv in a popup and use postMessage
+  const popup = window.open(
+    `https://app.deriv.com/redirect?app_id=${DERIV_APP_ID}`,
+    'derivAuth',
+    'width=500,height=600,scrollbars=yes,resizable=yes'
+  );
+
+  // Listen for messages from the popup
+  const messageListener = (event: MessageEvent) => {
+    if (event.origin !== 'https://app.deriv.com') return;
+    
+    console.log('Received message from Deriv:', event.data);
+    
+    if (event.data && event.data.account && event.data.token) {
+      // Store the auth data
+      localStorage.setItem('deriv_auth', JSON.stringify({
+        account: event.data.account,
+        token: event.data.token,
+        currency: event.data.currency || 'USD',
+        timestamp: Date.now()
+      }));
+      
+      sessionStorage.setItem('auth_status', 'authenticated');
+      
+      // Close popup and redirect
+      popup?.close();
+      window.removeEventListener('message', messageListener);
+      window.location.href = '/dashboard';
+    }
+  };
+
+  window.addEventListener('message', messageListener);
   
-  // Add redirect_uri separately to ensure proper encoding
-  params.append('redirect_uri', 'https://autotrendx.qzz.io/auth/callback');
-  
-  const authUrl = `https://oauth.deriv.com/oauth2/authorize?${params.toString()}`;
-  
-  console.log('🚀 Starting OAuth with URL:', authUrl);
-  
-  // Use location.assign instead of href for better compatibility
-  window.location.assign(authUrl);
+  // Fallback: if popup is closed manually, clean up
+  const checkClosed = setInterval(() => {
+    if (popup?.closed) {
+      window.removeEventListener('message', messageListener);
+      clearInterval(checkClosed);
+    }
+  }, 1000);
 };
 
 export const handleCallback = () => {
