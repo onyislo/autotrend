@@ -9,23 +9,28 @@ export default function Router() {
 
   useEffect(() => {
     const currentPath = window.location.pathname;
+    const currentUrl = window.location.href;
     const params = new URLSearchParams(window.location.search);
     
-    console.log('Router: Current path:', currentPath);
-    console.log('Router: URL params:', params.toString());
+    console.log('🔄 Router: Analyzing current location...');
+    console.log('📍 Path:', currentPath);
+    console.log('🔗 Full URL:', currentUrl);
+    console.log('📋 Params:', params.toString());
     
-    // Handle OAuth callback specifically
-    if (currentPath === '/auth/callback' || params.has('acct1') && params.has('token1')) {
-      console.log('Processing Deriv OAuth callback...');
+    // CRITICAL: Check if this is a Deriv OAuth callback
+    const hasCallbackParams = params.has('acct1') && params.has('token1');
+    const isCallbackPath = currentPath === '/auth/callback';
+    const isCallback = hasCallbackParams || isCallbackPath;
+    
+    if (isCallback) {
+      console.log('🔐 DETECTED: OAuth callback - Processing authentication...');
       const success = handleCallback();
+      
       if (success) {
-        console.log('Callback successful, redirecting to dashboard');
-        // Redirect to dashboard after successful login
-        window.history.replaceState({}, '', '/dashboard');
+        console.log('✅ Callback SUCCESS - Redirecting to dashboard');
         setShowDashboard(true);
       } else {
-        console.log('Callback failed, redirecting to home');
-        // Failed login, go back to home
+        console.log('❌ Callback FAILED - Redirecting to home');
         window.history.replaceState({}, '', '/');
         setShowDashboard(false);
       }
@@ -33,28 +38,30 @@ export default function Router() {
       return;
     }
 
-    // Check if we're on dashboard URL
+    // Check if we're trying to access dashboard
     if (currentPath === '/dashboard') {
       const loggedIn = isLoggedIn();
-      console.log('On dashboard, logged in:', loggedIn);
+      console.log('📊 Dashboard access check - Logged in:', loggedIn);
+      
       if (loggedIn) {
+        console.log('✅ User authenticated - Showing dashboard');
         setShowDashboard(true);
       } else {
-        // Not logged in, redirect to home
-        console.log('Not logged in, redirecting to home');
+        console.log('❌ Not authenticated - Redirecting to home');
         window.history.replaceState({}, '', '/');
         setShowDashboard(false);
       }
     } else {
       // On landing page or other URLs
       const loggedIn = isLoggedIn();
-      console.log('On landing page, logged in:', loggedIn);
-      if (loggedIn && currentPath !== '/') {
-        // Already logged in and not on home, go to dashboard
-        console.log('Already logged in, redirecting to dashboard');
+      console.log('🏠 Landing page - Logged in:', loggedIn);
+      
+      if (loggedIn && currentPath === '/') {
+        console.log('✅ Already authenticated - Auto-redirect to dashboard');
         window.history.replaceState({}, '', '/dashboard');
         setShowDashboard(true);
       } else {
+        console.log('🏠 Staying on landing page');
         setShowDashboard(false);
       }
     }

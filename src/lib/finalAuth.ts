@@ -1,34 +1,48 @@
-// FINAL AUTH SOLUTION - SIMPLE & WORKING
+// FINAL AUTH SOLUTION - FIXED CALLBACK ISSUE
 const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33130Dyu0P9Lr05ZQ8Z9';
 
 export const loginWithDeriv = () => {
   // Store that we want to go to dashboard after login
   sessionStorage.setItem('auth_intent', 'login');
   
-  // Use environment-based callback URL
+  // Use environment-based callback URL - CRITICAL FIX
   const isDev = import.meta.env.DEV;
   const callbackUrl = isDev 
-    ? (import.meta.env.VITE_CALLBACK_URL_DEV || 'http://localhost:5173/auth/callback')
-    : (import.meta.env.VITE_CALLBACK_URL_PROD || 'https://autotrendx.qzz.io/auth/callback');
+    ? 'http://localhost:5173/auth/callback'
+    : 'https://autotrendx.qzz.io/auth/callback';
   
-  console.log('Using callback URL:', callbackUrl);
+  console.log('🔐 Starting OAuth with callback:', callbackUrl);
   
-  // Build OAuth URL with proper callback
-  const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=en&brand=deriv&redirect_uri=${encodeURIComponent(callbackUrl)}`;
+  // Build OAuth URL - MUST INCLUDE redirect_uri parameter
+  const oauthParams = new URLSearchParams({
+    app_id: DERIV_APP_ID,
+    l: 'en',
+    brand: 'deriv',
+    redirect_uri: callbackUrl
+  });
   
-  console.log('Redirecting to:', oauthUrl);
+  const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?${oauthParams.toString()}`;
   
-  // Redirect to Deriv
+  console.log('🚀 Redirecting to:', oauthUrl);
+  
+  // Redirect to Deriv OAuth
   window.location.href = oauthUrl;
 };
 
 export const handleCallback = () => {
+  console.log('🔄 Processing callback...');
+  console.log('📍 Current URL:', window.location.href);
+  
   const params = new URLSearchParams(window.location.search);
   const account = params.get('acct1');
   const token = params.get('token1');
   const currency = params.get('cur1') || 'USD';
 
-  console.log('Callback params:', { account, token, currency });
+  console.log('📋 Callback params:', { 
+    account: account || 'MISSING', 
+    token: token ? 'PRESENT' : 'MISSING', 
+    currency 
+  });
 
   if (account && token) {
     // Save auth data
@@ -36,24 +50,31 @@ export const handleCallback = () => {
       account,
       token,
       currency,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      loginTime: new Date().toISOString()
     };
     
     localStorage.setItem('deriv_auth', JSON.stringify(authData));
     sessionStorage.setItem('auth_status', 'authenticated');
     
-    console.log('Authentication successful, saved data:', authData);
+    console.log('✅ Authentication successful!');
+    console.log('💾 Saved auth data for account:', account);
     
-    // Clear URL parameters but keep the path
-    const url = new URL(window.location.href);
-    url.search = '';
-    window.history.replaceState({}, '', url.pathname);
+    // Clear URL parameters and ensure we're on the right path
+    const cleanUrl = window.location.origin + '/dashboard';
+    window.history.replaceState({}, 'Dashboard', cleanUrl);
     
     return true;
+  } else {
+    console.error('❌ Authentication failed - Missing required parameters');
+    console.error('Expected: acct1 and token1, Got:', { account, token });
+    
+    // Clear any partial auth data
+    localStorage.removeItem('deriv_auth');
+    sessionStorage.removeItem('auth_status');
+    
+    return false;
   }
-  
-  console.error('Authentication failed - missing account or token');
-  return false;
 };
 
 export const isLoggedIn = (): boolean => {

@@ -623,6 +623,26 @@ export default function Dashboard() {
               <strong>🔵 Advanced Trading:</strong> Your original Deriv apps (opens in popup with pro features)
               <br />
               <strong>💡 Best of Both:</strong> New users start simple, advanced users get pro tools
+              <br />
+              <button 
+                onClick={() => {
+                  console.log('=== AUTHENTICATION DEBUG ===');
+                  console.log('Current URL:', window.location.href);
+                  console.log('Auth Data:', localStorage.getItem('deriv_auth'));
+                  console.log('Session Status:', sessionStorage.getItem('auth_status'));
+                  console.log('User Object:', user);
+                  
+                  const params = new URLSearchParams(window.location.search);
+                  console.log('URL Parameters:', params.toString());
+                  console.log('Has acct1:', params.has('acct1'));
+                  console.log('Has token1:', params.has('token1'));
+                  
+                  alert('Check console for debug info');
+                }}
+                className="mt-1 px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700"
+              >
+                🔍 Debug Auth
+              </button>
             </div>
           </div>
         </div>
