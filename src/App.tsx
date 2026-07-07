@@ -128,24 +128,12 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'register'; onClose: () 
             ) : (
               <>
                 <ExternalLink size={16} />
-                {mode === 'login' ? 'Login with Deriv' : 'Create Free Deriv Account'}
+                Login with Deriv
               </>
             )}
           </button>
 
-          <div className="mt-6 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
-            <p className="text-xs text-emerald-700">
-              <strong>🌐 For Everyone:</strong> New users will be prompted to create a Deriv account during login. Existing users can login instantly with their Deriv credentials.
-            </p>
-          </div>
-          
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-xs text-blue-700">
-              <strong>🔒 Secure & Regulated:</strong> Your account is protected by Deriv's advanced security and regulatory compliance.
-            </p>
-          </div>
-
-          <p className="text-center text-xs text-gray-400 mt-4">
+          <p className="text-center text-xs text-gray-400 mt-6">
             By continuing, you agree to Deriv's terms of service and privacy policy.
           </p>
         </motion.div>
