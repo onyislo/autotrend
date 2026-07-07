@@ -142,42 +142,6 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'register'; onClose: () 
     </AnimatePresence>
   );
 }
-    <AnimatePresence>
-      <motion.div className="fixed inset-0 z-[90] flex items-center justify-center px-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-        <motion.div
-          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8"
-          initial={{ y: 32, opacity: 0, scale: 0.97 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 20, opacity: 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-        >
-          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X size={18} /></button>
-          <div className="flex items-center gap-2 mb-6">
-            <Logo size={32} />
-            <span className="font-bold text-gray-900">Auto Trend X</span>
-          </div>
-          
-          {!manualMode ? (
-            <>
-              <h2 className="text-2xl font-extrabold text-gray-900 mb-1">
-                {mode === 'login' ? 'Welcome back' : 'Start trading today'}
-              </h2>
-              <p className="text-sm text-gray-500 mb-6">
-                {mode === 'login' 
-                  ? 'Sign in with your Deriv account to access your trading workspace.' 
-                  : 'Create a free Deriv account and start trading with professional tools. Anyone can join!'
-                }
-              </p>
-
-              <button 
-                onClick={handleDerivLogin}
-                disabled={loading}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors mt-2 flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     Connecting to Deriv...
                   </>
                 ) : (
