@@ -1,76 +1,67 @@
-// DIRECT LOGIN SOLUTION - NO OAUTH CALLBACK ISSUES
+// REAL DERIV LOGIN - NO DEMO, NO REDIRECT ISSUES
 const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33130Dyu0P9Lr05ZQ8Z9';
 
 export const loginWithDeriv = () => {
-  console.log('🔐 Starting DIRECT login process...');
+  console.log('🔐 Starting REAL Deriv login...');
   
-  // Method 1: Try direct login with window message handling
-  const authWindow = window.open(
-    `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=en&brand=deriv`,
-    'derivAuth',
-    'width=500,height=600,scrollbars=yes,resizable=yes'
-  );
+  // Build the OAuth URL with correct callback
+  const isDev = window.location.hostname === 'localhost';
+  const callbackUrl = isDev 
+    ? 'http://localhost:5173/auth/callback'
+    : 'https://autotrendx.qzz.io/auth/callback';
   
-  if (!authWindow) {
-    alert('Please allow popups and try again');
-    return;
-  }
+  const oauthParams = new URLSearchParams({
+    app_id: DERIV_APP_ID,
+    l: 'en',
+    brand: 'deriv',
+    redirect_uri: callbackUrl
+  });
   
-  // Listen for messages from the auth window
-  const messageHandler = (event) => {
-    console.log('📩 Received message:', event.data);
-    
-    if (event.origin !== 'https://oauth.deriv.com') {
-      return;
-    }
-    
-    if (event.data && event.data.type === 'authorize') {
-      console.log('✅ Authorization successful!');
-      
-      // Save auth data
-      const authData = {
-        account: event.data.account,
-        token: event.data.token,
-        currency: event.data.currency || 'USD',
-        timestamp: Date.now(),
-        loginTime: new Date().toISOString()
-      };
-      
-      localStorage.setItem('deriv_auth', JSON.stringify(authData));
-      sessionStorage.setItem('auth_status', 'authenticated');
-      
-      // Close auth window
-      authWindow.close();
-      
-      // Redirect to dashboard
-      window.location.href = '/dashboard';
-      
-      // Remove event listener
-      window.removeEventListener('message', messageHandler);
-    }
-  };
+  const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?${oauthParams.toString()}`;
   
-  window.addEventListener('message', messageHandler);
+  console.log('🔗 OAuth URL:', oauthUrl);
+  console.log('📍 Callback URL:', callbackUrl);
   
-  // Fallback: Check if window closed manually
-  const checkClosed = setInterval(() => {
-    if (authWindow.closed) {
-      clearInterval(checkClosed);
-      window.removeEventListener('message', messageHandler);
-      
-      // Check if user manually completed auth by checking URL
-      checkManualAuth();
-    }
-  }, 1000);
+  // Direct redirect to Deriv (this should work with your configured callback URL)
+  window.location.href = oauthUrl;
 };
 
-// Alternative method: Check for manual authentication
-const checkManualAuth = () => {
-  // If user completed auth manually, they might have the tokens in URL
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.has('acct1') && urlParams.has('token1')) {
-    handleCallback();
-    window.location.href = '/dashboard';
+export const handleCallback = () => {
+  console.log('🔄 Processing REAL Deriv callback...');
+  console.log('📍 Current URL:', window.location.href);
+  
+  const params = new URLSearchParams(window.location.search);
+  const account = params.get('acct1');
+  const token = params.get('token1');
+  const currency = params.get('cur1') || 'USD';
+
+  console.log('📋 Callback params:', { 
+    account: account || 'MISSING', 
+    token: token ? 'PRESENT' : 'MISSING', 
+    currency 
+  });
+
+  if (account && token) {
+    // Save REAL auth data
+    const authData = {
+      account,
+      token,
+      currency,
+      timestamp: Date.now(),
+      loginTime: new Date().toISOString(),
+      isRealAccount: true
+    };
+    
+    localStorage.setItem('deriv_auth', JSON.stringify(authData));
+    sessionStorage.setItem('auth_status', 'authenticated');
+    
+    console.log('✅ REAL Authentication successful!');
+    console.log('💾 Saved REAL auth data for account:', account);
+    
+    return true;
+  } else {
+    console.error('❌ REAL Authentication failed - Missing required parameters');
+    return false;
   }
 };
 

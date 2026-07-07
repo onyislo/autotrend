@@ -20,15 +20,22 @@ export default function Router() {
     // CRITICAL: Check if this is a Deriv OAuth callback
     const hasCallbackParams = params.has('acct1') && params.has('token1');
     const isCallbackPath = currentPath === '/auth/callback';
-    const isCallback = hasCallbackParams || isCallbackPath;
+    
+    // Also check if we're already on autotrendx.qzz.io with callback params
+    const isOnOurSiteWithTokens = currentUrl.includes('autotrendx.qzz.io') && hasCallbackParams;
+    
+    const isCallback = hasCallbackParams || isCallbackPath || isOnOurSiteWithTokens;
     
     if (isCallback) {
-      console.log('🔐 DETECTED: OAuth callback - Processing authentication...');
+      console.log('🔐 DETECTED: OAuth callback - Processing REAL authentication...');
       const success = handleCallback();
       
       if (success) {
-        console.log('✅ Callback SUCCESS - Redirecting to dashboard');
-        setShowDashboard(true);
+        console.log('✅ REAL Callback SUCCESS - Redirecting to dashboard');
+        // Force clean redirect to dashboard
+        const dashboardUrl = window.location.origin + '/dashboard';
+        window.location.replace(dashboardUrl);
+        return;
       } else {
         console.log('❌ Callback FAILED - Redirecting to home');
         window.history.replaceState({}, '', '/');
