@@ -1,47 +1,14 @@
-// DERIV WEBSOCKET API APPROACH - POPUP LOGIN
+// CORRECT DERIV OAUTH - FIXED REDIRECT URL
 const DERIV_APP_ID = '33LvvK8qit4Q2yXrRMiPAY';
 
 export const loginWithDeriv = () => {
-  // Instead of OAuth redirect, open Deriv in a popup and use postMessage
-  const popup = window.open(
-    `https://app.deriv.com/redirect?app_id=${DERIV_APP_ID}`,
-    'derivAuth',
-    'width=500,height=600,scrollbars=yes,resizable=yes'
-  );
-
-  // Listen for messages from the popup
-  const messageListener = (event: MessageEvent) => {
-    if (event.origin !== 'https://app.deriv.com') return;
-    
-    console.log('Received message from Deriv:', event.data);
-    
-    if (event.data && event.data.account && event.data.token) {
-      // Store the auth data
-      localStorage.setItem('deriv_auth', JSON.stringify({
-        account: event.data.account,
-        token: event.data.token,
-        currency: event.data.currency || 'USD',
-        timestamp: Date.now()
-      }));
-      
-      sessionStorage.setItem('auth_status', 'authenticated');
-      
-      // Close popup and redirect
-      popup?.close();
-      window.removeEventListener('message', messageListener);
-      window.location.href = '/dashboard';
-    }
-  };
-
-  window.addEventListener('message', messageListener);
+  // Use the CORRECT Deriv OAuth URL that actually redirects back
+  const oauthUrl = `https://app.deriv.com/redirect?app_id=${DERIV_APP_ID}&l=en&brand=deriv`;
   
-  // Fallback: if popup is closed manually, clean up
-  const checkClosed = setInterval(() => {
-    if (popup?.closed) {
-      window.removeEventListener('message', messageListener);
-      clearInterval(checkClosed);
-    }
-  }, 1000);
+  console.log('🚀 OAuth URL:', oauthUrl);
+  
+  // Simple redirect - no complicated popup nonsense
+  window.location.href = oauthUrl;
 };
 
 export const handleCallback = () => {
