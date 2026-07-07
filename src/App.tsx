@@ -133,6 +133,49 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'register'; onClose: () 
             )}
           </button>
 
+          {/* Manual Login Helper */}
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
+            <p className="font-medium mb-2">🔧 Alternative Login Method:</p>
+            <p className="mb-2">If popup doesn't work:</p>
+            <ol className="list-decimal ml-4 space-y-1">
+              <li>Click the button above to open Deriv login</li>
+              <li>Complete login on Deriv</li>
+              <li>Copy the final URL from address bar</li>
+              <li>Come back here and paste it below:</li>
+            </ol>
+            <input 
+              type="text" 
+              placeholder="Paste Deriv URL with tokens here..."
+              className="w-full mt-2 p-2 border border-gray-300 rounded text-xs"
+              onChange={(e) => {
+                const url = e.target.value;
+                if (url.includes('acct1=') && url.includes('token1=')) {
+                  try {
+                    const urlObj = new URL(url);
+                    const params = urlObj.searchParams;
+                    const account = params.get('acct1');
+                    const token = params.get('token1');
+                    const currency = params.get('cur1') || 'USD';
+                    
+                    if (account && token) {
+                      const authData = {
+                        account,
+                        token,
+                        currency,
+                        timestamp: Date.now()
+                      };
+                      localStorage.setItem('deriv_auth', JSON.stringify(authData));
+                      sessionStorage.setItem('auth_status', 'authenticated');
+                      window.location.href = '/dashboard';
+                    }
+                  } catch (err) {
+                    console.error('Invalid URL format');
+                  }
+                }
+              }}
+            />
+          </div>
+
           <div className="mt-6 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
             <p className="text-xs text-emerald-700">
               <strong>Secure & Regulated:</strong> Your account is protected by Deriv's advanced security and regulatory compliance.

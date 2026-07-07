@@ -1,32 +1,77 @@
-// FINAL AUTH SOLUTION - FIXED CALLBACK ISSUE
+// DIRECT LOGIN SOLUTION - NO OAUTH CALLBACK ISSUES
 const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33130Dyu0P9Lr05ZQ8Z9';
 
 export const loginWithDeriv = () => {
-  // Store that we want to go to dashboard after login
-  sessionStorage.setItem('auth_intent', 'login');
+  console.log('🔐 Starting DIRECT login process...');
   
-  // Use environment-based callback URL - CRITICAL FIX
-  const isDev = import.meta.env.DEV;
-  const callbackUrl = isDev 
-    ? 'http://localhost:5173/auth/callback'
-    : 'https://autotrendx.qzz.io/auth/callback';
+  // Method 1: Try direct login with window message handling
+  const authWindow = window.open(
+    `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=en&brand=deriv`,
+    'derivAuth',
+    'width=500,height=600,scrollbars=yes,resizable=yes'
+  );
   
-  console.log('🔐 Starting OAuth with callback:', callbackUrl);
+  if (!authWindow) {
+    alert('Please allow popups and try again');
+    return;
+  }
   
-  // Build OAuth URL - MUST INCLUDE redirect_uri parameter
-  const oauthParams = new URLSearchParams({
-    app_id: DERIV_APP_ID,
-    l: 'en',
-    brand: 'deriv',
-    redirect_uri: callbackUrl
-  });
+  // Listen for messages from the auth window
+  const messageHandler = (event) => {
+    console.log('📩 Received message:', event.data);
+    
+    if (event.origin !== 'https://oauth.deriv.com') {
+      return;
+    }
+    
+    if (event.data && event.data.type === 'authorize') {
+      console.log('✅ Authorization successful!');
+      
+      // Save auth data
+      const authData = {
+        account: event.data.account,
+        token: event.data.token,
+        currency: event.data.currency || 'USD',
+        timestamp: Date.now(),
+        loginTime: new Date().toISOString()
+      };
+      
+      localStorage.setItem('deriv_auth', JSON.stringify(authData));
+      sessionStorage.setItem('auth_status', 'authenticated');
+      
+      // Close auth window
+      authWindow.close();
+      
+      // Redirect to dashboard
+      window.location.href = '/dashboard';
+      
+      // Remove event listener
+      window.removeEventListener('message', messageHandler);
+    }
+  };
   
-  const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?${oauthParams.toString()}`;
+  window.addEventListener('message', messageHandler);
   
-  console.log('🚀 Redirecting to:', oauthUrl);
-  
-  // Redirect to Deriv OAuth
-  window.location.href = oauthUrl;
+  // Fallback: Check if window closed manually
+  const checkClosed = setInterval(() => {
+    if (authWindow.closed) {
+      clearInterval(checkClosed);
+      window.removeEventListener('message', messageHandler);
+      
+      // Check if user manually completed auth by checking URL
+      checkManualAuth();
+    }
+  }, 1000);
+};
+
+// Alternative method: Check for manual authentication
+const checkManualAuth = () => {
+  // If user completed auth manually, they might have the tokens in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('acct1') && urlParams.has('token1')) {
+    handleCallback();
+    window.location.href = '/dashboard';
+  }
 };
 
 export const handleCallback = () => {
@@ -67,12 +112,6 @@ export const handleCallback = () => {
     return true;
   } else {
     console.error('❌ Authentication failed - Missing required parameters');
-    console.error('Expected: acct1 and token1, Got:', { account, token });
-    
-    // Clear any partial auth data
-    localStorage.removeItem('deriv_auth');
-    sessionStorage.removeItem('auth_status');
-    
     return false;
   }
 };
