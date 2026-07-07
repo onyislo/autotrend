@@ -1,5 +1,5 @@
 // CORRECT DERIV OAUTH 2.0 WITH PKCE - FOLLOWING DOCUMENTATION
-const DERIV_APP_ID = '33LvvK8qit4Q2yXrRMiPAY';
+const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33LvvK8qit4Q2yXrRMiPAY';
 
 // Generate PKCE parameters
 const generatePKCE = async () => {
@@ -30,11 +30,14 @@ export const loginWithDeriv = async () => {
   sessionStorage.setItem('pkce_code_verifier', codeVerifier);
   sessionStorage.setItem('oauth_state', state);
   
+  // Use environment variables
+  const redirectUri = `${import.meta.env.VITE_SITE_URL || 'https://autotrendx.qzz.io'}/auth/callback`;
+  
   // Build OAuth URL - only use client_id for OAuth2 apps
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: DERIV_APP_ID,
-    redirect_uri: 'https://autotrendx.qzz.io/auth/callback',
+    redirect_uri: redirectUri,
     scope: 'trade account_manage',
     state: state,
     code_challenge: codeChallenge,
@@ -45,6 +48,8 @@ export const loginWithDeriv = async () => {
   const authUrl = `https://auth.deriv.com/oauth2/auth?${params.toString()}`;
   
   console.log('🚀 OAuth URL:', authUrl);
+  console.log('📍 Using App ID:', DERIV_APP_ID);
+  console.log('🔗 Redirect URI:', redirectUri);
   window.location.href = authUrl;
 };
 
@@ -89,6 +94,8 @@ export const handleCallback = () => {
 
 const exchangeCodeForToken = async (code: string, codeVerifier: string) => {
   try {
+    const redirectUri = `${import.meta.env.VITE_SITE_URL || 'https://autotrendx.qzz.io'}/auth/callback`;
+    
     // This should normally be done on your backend
     const response = await fetch('https://auth.deriv.com/oauth2/token', {
       method: 'POST',
@@ -100,7 +107,7 @@ const exchangeCodeForToken = async (code: string, codeVerifier: string) => {
         client_id: DERIV_APP_ID,
         code: code,
         code_verifier: codeVerifier,
-        redirect_uri: 'https://autotrendx.qzz.io/auth/callback'
+        redirect_uri: redirectUri
       })
     });
     
@@ -124,7 +131,8 @@ const exchangeCodeForToken = async (code: string, codeVerifier: string) => {
       console.log('✅ Token exchange successful');
       window.location.href = '/dashboard';
     } else {
-      console.log('❌ Token exchange failed:', response.status);
+      const errorData = await response.text();
+      console.log('❌ Token exchange failed:', response.status, errorData);
     }
   } catch (error) {
     console.log('❌ Token exchange error:', error);
