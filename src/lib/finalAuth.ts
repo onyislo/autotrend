@@ -1,9 +1,12 @@
-// SIMPLE FIX - JUST MAKE THE REDIRECT WORK
+// SIMPLE FIX - CORRECT OAUTH URL
 const DERIV_APP_ID = '33LvvK8qit4Q2yXrRMiPAY';
 
 export const loginWithDeriv = () => {
-  // Simple redirect with explicit callback
-  window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=en&brand=deriv&redirect_uri=https://autotrendx.qzz.io/auth/callback`;
+  // Correct OAuth URL - must use oauth.deriv.com, not home.deriv.com
+  const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=en&brand=deriv&redirect_uri=https://autotrendx.qzz.io/auth/callback`;
+  
+  console.log('Redirecting to correct OAuth URL:', oauthUrl);
+  window.location.href = oauthUrl;
 };
 
 export const handleCallback = () => {
