@@ -30,16 +30,16 @@ export const loginWithDeriv = async () => {
   sessionStorage.setItem('pkce_code_verifier', codeVerifier);
   sessionStorage.setItem('oauth_state', state);
   
-  // Build OAuth URL according to documentation
+  // Build OAuth URL - only use client_id for OAuth2 apps
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: DERIV_APP_ID, // Using legacy app_id as client_id
+    client_id: DERIV_APP_ID,
     redirect_uri: 'https://autotrendx.qzz.io/auth/callback',
     scope: 'trade account_manage',
     state: state,
     code_challenge: codeChallenge,
-    code_challenge_method: 'S256',
-    app_id: DERIV_APP_ID // Legacy support
+    code_challenge_method: 'S256'
+    // Remove app_id since this is a proper OAuth2 app
   });
   
   const authUrl = `https://auth.deriv.com/oauth2/auth?${params.toString()}`;
