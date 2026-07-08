@@ -1,5 +1,5 @@
 // CORRECT DERIV OAUTH 2.0 WITH PKCE - FOLLOWING DOCUMENTATION
-const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33LvvK8qit4Q2yXrRMiPAY';
+const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33LvvKBQK4Q2yXrBWHPAV';
 
 // Generate PKCE parameters
 const generatePKCE = async () => {

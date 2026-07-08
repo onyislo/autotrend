@@ -1,10 +1,14 @@
 // Simple Deriv OAuth - WORKING VERSION
-const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33130Dyu0P9Lr05ZQ8Z9';
+const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33LvvKBQK4Q2yXrBWHPAV';
 
 // Redirect to Deriv OAuth
 export const loginWithDeriv = () => {
   const currentUrl = window.location.origin;
-  const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=en&brand=deriv`;
+  const redirectUri = currentUrl.includes('localhost') 
+    ? 'http://localhost:5173/auth/callback' 
+    : 'https://autotrendx.qzz.io/auth/callback';
+    
+  const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=en&brand=deriv&redirect_uri=${encodeURIComponent(redirectUri)}`;
   
   // Store where we came from
   localStorage.setItem('deriv_return_url', `${currentUrl}/dashboard`);
