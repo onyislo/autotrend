@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import App from '../App';
 import Dashboard from './Dashboard';
-import { handleCallback, isLoggedIn } from '../lib/finalAuth';
+import { handleDerivCallback, isAuthenticated } from '../lib/derivAuth';
 
 export default function Router() {
   const [showDashboard, setShowDashboard] = useState(false);
@@ -28,16 +28,22 @@ export default function Router() {
     
     if (isCallback) {
       console.log('🔐 DETECTED: OAuth callback - Processing REAL authentication...');
-      const success = handleCallback();
-      
-      if (success) {
-        console.log('✅ REAL Callback SUCCESS - Redirecting to dashboard');
-        // Force clean redirect to dashboard
-        const dashboardUrl = window.location.origin + '/dashboard';
-        window.location.replace(dashboardUrl);
-        return;
-      } else {
-        console.log('❌ Callback FAILED - Redirecting to home');
+      try {
+        const authData = handleDerivCallback();
+        
+        if (authData) {
+          console.log('✅ REAL Callback SUCCESS - Redirecting to dashboard');
+          // Force clean redirect to dashboard
+          const dashboardUrl = window.location.origin + '/dashboard';
+          window.location.replace(dashboardUrl);
+          return;
+        } else {
+          console.log('❌ Callback FAILED - Redirecting to home');
+          window.history.replaceState({}, '', '/');
+          setShowDashboard(false);
+        }
+      } catch (error) {
+        console.error('❌ Callback Error:', error);
         window.history.replaceState({}, '', '/');
         setShowDashboard(false);
       }
@@ -47,7 +53,7 @@ export default function Router() {
 
     // Check if we're trying to access dashboard
     if (currentPath === '/dashboard') {
-      const loggedIn = isLoggedIn();
+      const loggedIn = isAuthenticated();
       console.log('📊 Dashboard access check - Logged in:', loggedIn);
       
       if (loggedIn) {
@@ -60,7 +66,7 @@ export default function Router() {
       }
     } else {
       // On landing page or other URLs
-      const loggedIn = isLoggedIn();
+      const loggedIn = isAuthenticated();
       console.log('🏠 Landing page - Logged in:', loggedIn);
       
       if (loggedIn && currentPath === '/') {

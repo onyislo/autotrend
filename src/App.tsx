@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, Star, Play, UserPlus, ChevronRight, BarChart2, Zap, Shield, TrendingUp, Menu, X, ExternalLink } from 'lucide-react';
-import { loginWithDeriv } from './lib/finalAuth';
+import { loginWithDeriv } from './lib/derivAuth';
 
 function Logo({ size = 36 }: { size?: number }) {
   return (
