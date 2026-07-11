@@ -1,5 +1,5 @@
 // Simple Deriv OAuth - WORKING VERSION
-const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33LvvKBQK4Q2yXrBWHPAV';
+const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33MJcHX2yZOr6lkeIP9Mg';
 
 // Redirect to Deriv OAuth
 export const loginWithDeriv = () => {
