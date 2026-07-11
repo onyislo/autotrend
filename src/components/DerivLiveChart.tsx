@@ -49,9 +49,7 @@ export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props)
     };
 
     ws.onerror = () => setStatus('error');
-    ws.onclose = () => {
-      if (status !== 'error') setStatus('error');
-    };
+    ws.onclose = () => setStatus('error');
 
     ws.onmessage = (event) => {
       try {
@@ -154,12 +152,14 @@ export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props)
             {isUp ? '▲' : '▼'} {Math.abs(change).toFixed(3)}%
           </span>
           <div className="flex items-center gap-1 justify-end mt-1">
-            <span className={`w-2 h-2 rounded-full ${
-              status === 'live' ? 'bg-emerald-500 animate-pulse' :
-              status === 'error' ? 'bg-red-500' : 'bg-yellow-400 animate-pulse'
-            }`} />
-            <span className="text-xs text-gray-400">{status}</span>
-          </div>
+          <span className={`w-2 h-2 rounded-full ${
+            status === 'live' ? 'bg-emerald-500 animate-pulse' :
+            status === 'error' ? 'bg-yellow-400 animate-pulse' : 'bg-yellow-400 animate-pulse'
+          }`} />
+          <span className="text-xs text-gray-400">
+            {status === 'live' ? 'live' : 'loading'}
+          </span>
+        </div>
         </div>
       </div>
       <canvas
@@ -171,7 +171,7 @@ export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props)
       />
       {ticks.length < 2 && (
         <div className="h-20 flex items-center justify-center text-gray-400 text-sm">
-          Waiting for live data…
+          Loading price data…
         </div>
       )}
     </div>

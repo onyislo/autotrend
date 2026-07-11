@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Menu, X, Wifi, WifiOff } from 'lucide-react';
+import { LogOut, Menu, X, TrendingUp, Calculator, Bot, BarChart3 } from 'lucide-react';
 import { logout } from '../lib/derivAuth';
 import DerivLiveChart from './DerivLiveChart';
 import DerivAppLauncher from './DerivAppLauncher';
@@ -21,6 +21,8 @@ interface MeResponse {
   wsUrl: string | null;
   accountId: string | null;
 }
+
+type MainTab = 'markets' | 'accumulators' | 'digits' | 'bot' | 'risefall';
 
 // ---------------------------------------------------------------------------
 // Logo
@@ -50,17 +52,28 @@ function Logo({ size = 32 }: { size?: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// Markets to show live charts for
+// Markets for the live chart tab
 // ---------------------------------------------------------------------------
 const MARKETS = [
-  { symbol: 'R_10',   label: 'Volatility 10 Index' },
-  { symbol: 'R_25',   label: 'Volatility 25 Index' },
-  { symbol: 'R_50',   label: 'Volatility 50 Index' },
-  { symbol: 'R_75',   label: 'Volatility 75 Index' },
-  { symbol: 'R_100',  label: 'Volatility 100 Index' },
-  { symbol: 'CRASH300N', label: 'Crash 300 Index' },
-  { symbol: 'BOOM300N', label: 'Boom 300 Index' },
-  { symbol: 'JD10',   label: 'Jump 10 Index' },
+  { symbol: 'R_10',      label: 'Volatility 10' },
+  { symbol: 'R_25',      label: 'Volatility 25' },
+  { symbol: 'R_50',      label: 'Volatility 50' },
+  { symbol: 'R_75',      label: 'Volatility 75' },
+  { symbol: 'R_100',     label: 'Volatility 100' },
+  { symbol: 'CRASH300N', label: 'Crash 300' },
+  { symbol: 'BOOM300N',  label: 'Boom 300' },
+  { symbol: 'JD10',      label: 'Jump 10' },
+];
+
+// ---------------------------------------------------------------------------
+// Main tabs (sidebar on desktop, bottom bar on mobile)
+// ---------------------------------------------------------------------------
+const MAIN_TABS = [
+  { id: 'markets'      as MainTab, label: 'Live Markets',   icon: BarChart3  },
+  { id: 'accumulators' as MainTab, label: 'Accumulators',   icon: TrendingUp },
+  { id: 'digits'       as MainTab, label: 'Digits',         icon: Calculator },
+  { id: 'bot'          as MainTab, label: 'Bot Builder',    icon: Bot        },
+  { id: 'risefall'     as MainTab, label: 'Rise / Fall',    icon: BarChart3  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -70,6 +83,7 @@ export default function Dashboard() {
   const [session, setSession] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<MainTab>('markets');
   const [activeChart, setActiveChart] = useState(MARKETS[0].symbol);
 
   useEffect(() => {
@@ -82,11 +96,12 @@ export default function Dashboard() {
 
   const realAccount = session?.accounts.find((a) => a.account_type !== 'demo');
   const demoAccount = session?.accounts.find((a) => a.account_type === 'demo');
-  const currentAccount = session?.accounts.find(
-    (a) => a.account_id === session.accountId
-  ) ?? realAccount ?? session?.accounts[0];
+  const currentAccount =
+    session?.accounts.find((a) => a.account_id === session.accountId) ??
+    realAccount ??
+    session?.accounts[0];
 
-  const formatBalance = (val: number | string | undefined) =>
+  const fmt = (val: number | string | undefined) =>
     val !== undefined ? Number(val).toFixed(2) : '—';
 
   if (loading) {
@@ -102,12 +117,20 @@ export default function Dashboard() {
 
   const activeMarket = MARKETS.find((m) => m.symbol === activeChart) ?? MARKETS[0];
 
+  // Which tab the user clicked in the sidebar/bottom nav
+  const handleTabClick = (tab: MainTab) => {
+    setActiveTab(tab);
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+
       {/* ── Top Nav ── */}
       <nav className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* Mobile hamburger */}
             <button
               className="md:hidden text-gray-600 p-1"
               onClick={() => setMobileMenuOpen(true)}
@@ -122,150 +145,224 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Connection status */}
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-gray-500">
-              {session?.wsToken ? (
-                <><Wifi size={14} className="text-emerald-500" /> Live</>
-              ) : (
-                <><WifiOff size={14} className="text-red-400" /> Offline</>
-              )}
-            </div>
-
-            {/* Account balances */}
+            {/* Balance */}
             {currentAccount && (
               <div className="text-right">
                 <p className="text-sm font-semibold text-gray-900">
-                  {currentAccount.currency ?? 'USD'} {formatBalance(currentAccount.balance)}
+                  {currentAccount.currency ?? 'USD'} {fmt(currentAccount.balance)}
                 </p>
-                <p className="text-xs text-gray-500">{currentAccount.loginid ?? currentAccount.account_id}</p>
+                <p className="text-xs text-gray-500">
+                  {currentAccount.loginid ?? currentAccount.account_id}
+                </p>
               </div>
             )}
-
+            {/* Logout — desktop only. On mobile it lives inside the hamburger drawer */}
             <button
               onClick={logout}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-100"
+              className="hidden md:flex items-center gap-1.5 text-gray-500 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-100 text-sm"
             >
-              <LogOut size={16} />
-              <span className="hidden sm:inline text-sm">Logout</span>
+              <LogOut size={15} />
+              <span>Logout</span>
             </button>
           </div>
         </div>
       </nav>
 
-      {/* ── Mobile Drawer ── */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-72 bg-white shadow-xl flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <div className="flex items-center gap-2"><Logo size={28} /><span className="font-bold">Auto Trend X</span></div>
-              <button onClick={() => setMobileMenuOpen(false)}><X size={22} className="text-gray-400" /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Markets</p>
-              {MARKETS.map((m) => (
-                <button
-                  key={m.symbol}
-                  onClick={() => { setActiveChart(m.symbol); setMobileMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                    activeChart === m.symbol ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-            <div className="p-4 border-t border-gray-100">
-              <div className="text-sm text-gray-500 mb-1">
-                Real: {currentAccount?.currency} {formatBalance(realAccount?.balance)}
-              </div>
-              <div className="text-sm text-gray-500 mb-3">
-                Demo: USD {formatBalance(demoAccount?.balance)}
-              </div>
-              <button onClick={logout} className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-sm">
-                <LogOut size={14} /> Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="flex flex-1 max-w-7xl mx-auto w-full">
 
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-
-        {/* ── Balance Bar ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: 'Real Balance', value: `${realAccount?.currency ?? 'USD'} ${formatBalance(realAccount?.balance)}`, color: 'emerald' },
-            { label: 'Demo Balance', value: `USD ${formatBalance(demoAccount?.balance)}`, color: 'blue' },
-            { label: 'Account', value: currentAccount?.loginid ?? currentAccount?.account_id ?? '—', color: 'gray' },
-            { label: 'Status', value: session?.wsToken ? '🟢 Live Connected' : '🔴 Connecting…', color: 'gray' },
-          ].map((item) => (
-            <div key={item.label} className="bg-white rounded-xl border border-gray-200 px-4 py-3">
-              <p className="text-xs text-gray-500 mb-1">{item.label}</p>
-              <p className="font-bold text-gray-900 text-sm">{item.value}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Live Charts ── */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-gray-900">Live Markets</h2>
-            <span className="text-xs text-gray-400">Real-time via Deriv WebSocket</span>
-          </div>
-
-          {/* Market selector tabs */}
-          <div className="flex gap-2 flex-wrap mb-4">
-            {MARKETS.map((m) => (
+        {/* ── Desktop Sidebar ── */}
+        <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-gray-200 bg-white pt-6 pb-4 px-3 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">
+            Trading
+          </p>
+          <nav className="space-y-1 flex-1">
+            {MAIN_TABS.map((tab) => (
               <button
-                key={m.symbol}
-                onClick={() => setActiveChart(m.symbol)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  activeChart === m.symbol
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:border-emerald-300'
+                key={tab.id}
+                onClick={() => handleTabClick(tab.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                  activeTab === tab.id
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                {m.label}
+                <tab.icon size={18} />
+                {tab.label}
               </button>
+            ))}
+          </nav>
+
+          {/* Balance in sidebar */}
+          <div className="border-t border-gray-100 pt-3 mt-3 space-y-1 px-2">
+            <p className="text-xs text-gray-400">Real</p>
+            <p className="text-sm font-semibold text-gray-900">
+              {realAccount?.currency ?? 'USD'} {fmt(realAccount?.balance)}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">Demo</p>
+            <p className="text-sm font-semibold text-gray-900">
+              USD {fmt(demoAccount?.balance)}
+            </p>
+          </div>
+        </aside>
+
+        {/* ── Mobile Drawer ── */}
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-50 md:hidden">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
+            <div className="absolute left-0 top-0 h-full w-72 bg-white shadow-xl flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <Logo size={28} />
+                  <span className="font-bold text-gray-900">Auto Trend X</span>
+                </div>
+                <button onClick={() => setMobileMenuOpen(false)}>
+                  <X size={22} className="text-gray-400" />
+                </button>
+              </div>
+
+              <nav className="flex-1 p-3 space-y-1">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">
+                  Trading
+                </p>
+                {MAIN_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabClick(tab.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors text-left ${
+                      activeTab === tab.id
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <tab.icon size={18} />
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+
+              {/* Logout pinned near bottom — not too far down */}
+              <div className="px-3 pb-4 pt-2 border-t border-gray-100">
+                <div className="flex justify-between text-xs text-gray-400 mb-2 px-1">
+                  <span>Real: {realAccount?.currency ?? 'USD'} {fmt(realAccount?.balance)}</span>
+                  <span>Demo: {fmt(demoAccount?.balance)}</span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-sm font-medium"
+                >
+                  <LogOut size={14} /> Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Main Content ── */}
+        <main className="flex-1 px-4 py-6 space-y-6 pb-24 md:pb-6">
+
+          {/* Balance bar (top of content) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Real Balance', value: `${realAccount?.currency ?? 'USD'} ${fmt(realAccount?.balance)}` },
+              { label: 'Demo Balance', value: `USD ${fmt(demoAccount?.balance)}` },
+              { label: 'Account', value: currentAccount?.loginid ?? currentAccount?.account_id ?? '—' },
+              { label: 'Status', value: session?.wsToken ? '🟢 Connected' : '🟡 Loading…' },
+            ].map((item) => (
+              <div key={item.label} className="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                <p className="text-xs text-gray-400 mb-1">{item.label}</p>
+                <p className="font-bold text-gray-900 text-sm truncate">{item.value}</p>
+              </div>
             ))}
           </div>
 
-          {/* Active chart — full width */}
-          <DerivLiveChart
-            key={activeChart}
-            symbol={activeChart}
-            wsToken={session?.wsToken ?? null}
-            wsUrl={session?.wsUrl ?? null}
-            label={activeMarket.label}
-          />
+          {/* ── Live Markets tab ── */}
+          {activeTab === 'markets' && (
+            <div className="space-y-4">
+              <h2 className="font-bold text-gray-900 text-lg">Live Markets</h2>
 
-          {/* Mini chart grid — all other markets */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-            {MARKETS.filter((m) => m.symbol !== activeChart).slice(0, 4).map((m) => (
-              <button
-                key={m.symbol}
-                onClick={() => setActiveChart(m.symbol)}
-                className="text-left hover:ring-2 hover:ring-emerald-300 rounded-xl transition-all"
-              >
-                <DerivLiveChart
-                  symbol={m.symbol}
-                  wsToken={session?.wsToken ?? null}
-                  wsUrl={session?.wsUrl ?? null}
-                  label={m.label}
-                />
-              </button>
-            ))}
-          </div>
-        </div>
+              {/* Market selector */}
+              <div className="flex gap-2 flex-wrap">
+                {MARKETS.map((m) => (
+                  <button
+                    key={m.symbol}
+                    onClick={() => setActiveChart(m.symbol)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      activeChart === m.symbol
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:border-emerald-300'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
 
-        {/* ── Deriv App Launcher ── */}
-        <DerivAppLauncher
-          wsToken={session?.wsToken ?? null}
-          accountId={session?.accountId ?? null}
-        />
+              {/* Main chart */}
+              <DerivLiveChart
+                key={activeChart}
+                symbol={activeChart}
+                wsToken={session?.wsToken ?? null}
+                wsUrl={session?.wsUrl ?? null}
+                label={activeMarket.label}
+              />
 
+              {/* Mini grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {MARKETS.filter((m) => m.symbol !== activeChart).slice(0, 4).map((m) => (
+                  <button
+                    key={m.symbol}
+                    onClick={() => setActiveChart(m.symbol)}
+                    className="text-left hover:ring-2 hover:ring-emerald-300 rounded-xl transition-all"
+                  >
+                    <DerivLiveChart
+                      symbol={m.symbol}
+                      wsToken={session?.wsToken ?? null}
+                      wsUrl={session?.wsUrl ?? null}
+                      label={m.label}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Trading App tabs (Accumulators / Digits / Bot / Rise-Fall) ── */}
+          {activeTab !== 'markets' && (
+            <div className="space-y-4">
+              <h2 className="font-bold text-gray-900 text-lg">
+                {MAIN_TABS.find((t) => t.id === activeTab)?.label}
+              </h2>
+              <DerivAppLauncher
+                wsToken={session?.wsToken ?? null}
+                accountId={session?.accountId ?? null}
+                focusApp={activeTab}
+              />
+            </div>
+          )}
+
+        </main>
       </div>
+
+      {/* ── Mobile Bottom Navigation ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
+        <div className="flex">
+          {MAIN_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabClick(tab.id)}
+              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs transition-colors ${
+                activeTab === tab.id
+                  ? 'text-emerald-600'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              <tab.icon size={20} />
+              <span className="text-[10px] leading-tight">{tab.label.split(' ')[0]}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
     </div>
   );
 }
