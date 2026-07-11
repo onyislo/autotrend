@@ -565,9 +565,8 @@ export default function Dashboard() {
                       return;
                     }
                     
-                    let auth;
                     try {
-                      auth = JSON.parse(authData);
+                      JSON.parse(authData);
                     } catch (e) {
                       console.error('Error parsing auth data:', e);
                       alert('Authentication error. Please login again.');
