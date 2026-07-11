@@ -5,8 +5,8 @@ const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33LvvKBQK4Q2yXrBWHPAV
 export const loginWithDeriv = () => {
   const currentUrl = window.location.origin;
   const redirectUri = currentUrl.includes('localhost') 
-    ? 'http://localhost:5173/auth/callback' 
-    : 'https://autotrendx.qzz.io/auth/callback';
+    ? 'http://localhost:5173/api/auth/callback' 
+    : 'https://autotrendx.qzz.io/api/auth/callback';
     
   const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=en&brand=deriv&redirect_uri=${encodeURIComponent(redirectUri)}`;
   

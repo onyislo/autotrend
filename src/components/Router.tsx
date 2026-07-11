@@ -19,7 +19,7 @@ export default function Router() {
     
     // CRITICAL: Check if this is a Deriv OAuth callback
     const hasCallbackParams = params.has('acct1') && params.has('token1');
-    const isCallbackPath = currentPath === '/auth/callback';
+    const isCallbackPath = currentPath === '/api/auth/callback';
     
     // Also check if we're already on autotrendx.qzz.io with callback params
     const isOnOurSiteWithTokens = currentUrl.includes('autotrendx.qzz.io') && hasCallbackParams;

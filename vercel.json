@@ -4,7 +4,7 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/auth/callback",
+      "source": "/api/auth/callback",
       "destination": "/index.html"
     },
     {

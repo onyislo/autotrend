@@ -31,7 +31,7 @@ export const loginWithDeriv = async () => {
   sessionStorage.setItem('oauth_state', state);
   
   // Use environment variables
-  const redirectUri = `${import.meta.env.VITE_SITE_URL || 'https://autotrendx.qzz.io'}/auth/callback`;
+  const redirectUri = `${import.meta.env.VITE_SITE_URL || 'https://autotrendx.qzz.io'}/api/auth/callback`;
   
   // Build OAuth URL - only use client_id for OAuth2 apps
   const params = new URLSearchParams({
@@ -94,7 +94,7 @@ export const handleCallback = () => {
 
 const exchangeCodeForToken = async (code: string, codeVerifier: string) => {
   try {
-    const redirectUri = `${import.meta.env.VITE_SITE_URL || 'https://autotrendx.qzz.io'}/auth/callback`;
+    const redirectUri = `${import.meta.env.VITE_SITE_URL || 'https://autotrendx.qzz.io'}/api/auth/callback`;
     
     // This should normally be done on your backend
     const response = await fetch('https://auth.deriv.com/oauth2/token', {
