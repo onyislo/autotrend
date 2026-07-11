@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Menu, X, TrendingUp, Calculator, Bot, BarChart3 } from 'lucide-react';
+import { LogOut, Menu, X, TrendingUp, Calculator, Bot, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 import { logout } from '../lib/derivAuth';
 import DerivLiveChart from './DerivLiveChart';
 import DerivAppLauncher from './DerivAppLauncher';
@@ -83,6 +83,7 @@ export default function Dashboard() {
   const [session, setSession] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Desktop sidebar collapse
   const [activeTab, setActiveTab] = useState<MainTab>('markets');
   const [activeChart, setActiveChart] = useState(MARKETS[0].symbol);
 
@@ -170,39 +171,71 @@ export default function Dashboard() {
 
       <div className="flex flex-1 max-w-7xl mx-auto w-full">
 
-        {/* ── Desktop Sidebar ── */}
-        <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-gray-200 bg-white pt-6 pb-4 px-3 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">
-            Trading
-          </p>
-          <nav className="space-y-1 flex-1">
+        {/* ── Desktop Sidebar (collapsible) ── */}
+        <aside className={`hidden md:flex flex-col shrink-0 border-r border-gray-200 bg-white sticky top-16 h-[calc(100vh-4rem)] transition-all duration-200 ${sidebarCollapsed ? 'w-16' : 'w-56'}`}>
+          
+          {/* Collapse toggle button */}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="flex items-center justify-center h-10 mt-3 mx-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+
+          {!sidebarCollapsed && (
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-3 mb-2 px-4">
+              Trading
+            </p>
+          )}
+
+          {/* Nav items */}
+          <nav className="flex-1 px-2 space-y-1 mt-1">
             {MAIN_TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => handleTabClick(tab.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                title={sidebarCollapsed ? tab.label : undefined}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  sidebarCollapsed ? 'justify-center' : 'text-left'
+                } ${
                   activeTab === tab.id
                     ? 'bg-emerald-50 text-emerald-700'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <tab.icon size={18} />
-                {tab.label}
+                <tab.icon size={18} className="shrink-0" />
+                {!sidebarCollapsed && <span>{tab.label}</span>}
               </button>
             ))}
           </nav>
 
-          {/* Balance in sidebar */}
-          <div className="border-t border-gray-100 pt-3 mt-3 space-y-1 px-2">
-            <p className="text-xs text-gray-400">Real</p>
-            <p className="text-sm font-semibold text-gray-900">
-              {realAccount?.currency ?? 'USD'} {fmt(realAccount?.balance)}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">Demo</p>
-            <p className="text-sm font-semibold text-gray-900">
-              USD {fmt(demoAccount?.balance)}
-            </p>
-          </div>
+          {/* Balance + Logout at bottom */}
+          {!sidebarCollapsed && (
+            <div className="border-t border-gray-100 px-4 pt-3 pb-4 space-y-1">
+              <p className="text-xs text-gray-400">Real: {realAccount?.currency ?? 'USD'} {fmt(realAccount?.balance)}</p>
+              <p className="text-xs text-gray-400">Demo: USD {fmt(demoAccount?.balance)}</p>
+              <button
+                onClick={logout}
+                className="w-full flex items-center justify-center gap-2 mt-2 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-sm font-medium"
+              >
+                <LogOut size={14} /> Logout
+              </button>
+            </div>
+          )}
+
+          {/* Collapsed: just logout icon at bottom */}
+          {sidebarCollapsed && (
+            <div className="pb-4 px-2">
+              <button
+                onClick={logout}
+                title="Logout"
+                className="w-full flex items-center justify-center py-2.5 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
+          )}
         </aside>
 
         {/* ── Mobile Drawer ── */}
