@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Menu, X, TrendingUp, Calculator, Bot, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, Menu, X, TrendingUp, Calculator, Bot, BarChart3 } from 'lucide-react';
 import { logout } from '../lib/derivAuth';
 import DerivLiveChart from './DerivLiveChart';
 import DerivAppLauncher from './DerivAppLauncher';
@@ -138,6 +138,14 @@ export default function Dashboard() {
             >
               <Menu size={24} />
             </button>
+            {/* Desktop sidebar toggle — like ChatGPT */}
+            <button
+              className="hidden md:flex text-gray-500 hover:text-gray-900 hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              title={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+            >
+              <Menu size={20} />
+            </button>
             <Logo size={32} />
             <div>
               <h1 className="font-bold text-gray-900">Auto Trend X</h1>
@@ -173,18 +181,9 @@ export default function Dashboard() {
 
         {/* ── Desktop Sidebar (collapsible) ── */}
         <aside className={`hidden md:flex flex-col shrink-0 border-r border-gray-200 bg-white sticky top-16 h-[calc(100vh-4rem)] transition-all duration-200 ${sidebarCollapsed ? 'w-16' : 'w-56'}`}>
-          
-          {/* Collapse toggle button */}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="flex items-center justify-center h-10 mt-3 mx-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </button>
 
           {!sidebarCollapsed && (
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-3 mb-2 px-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-5 mb-2 px-4">
               Trading
             </p>
           )}
