@@ -12,7 +12,7 @@ interface Props {
   label: string;
 }
 
-const WS_ENDPOINT = 'wss://ws.derivws.com/websockets/v3?app_id=';
+const WS_ENDPOINT = 'wss://ws.binaryws.com/websockets/v3?app_id=';
 const APP_ID = import.meta.env.VITE_DERIV_APP_ID ?? '1089';
 const MAX_TICKS = 60;
 
@@ -21,6 +21,7 @@ export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props)
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [change, setChange] = useState<number>(0);
   const [status, setStatus] = useState<'connecting' | 'live' | 'error'>('connecting');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -29,8 +30,9 @@ export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props)
     setCurrentPrice(null);
     setChange(0);
     setStatus('connecting');
+    setErrorMessage(null);
 
-    // Always connect directly to the public Deriv WebSocket for instant public tick data
+    // Use ws.binaryws.com as the highly-stable endpoint for public tick data
     const ws = new WebSocket(`${WS_ENDPOINT}${APP_ID}`);
     wsRef.current = ws;
 
@@ -39,12 +41,24 @@ export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props)
       ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
     };
 
-    ws.onerror = () => setStatus('error');
-    ws.onclose = () => setStatus('error');
+    ws.onerror = () => {
+      setStatus('error');
+      setErrorMessage('Failed to connect to API server.');
+    };
+    
+    ws.onclose = () => {
+      setStatus('error');
+    };
 
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data as string);
+        if (msg.error) {
+          console.error('Deriv Chart API Error:', msg.error);
+          setStatus('error');
+          setErrorMessage(msg.error.message || 'API request rejected.');
+          return;
+        }
         if (msg.tick) {
           const price = msg.tick.quote as number;
           const time = msg.tick.epoch as number;
@@ -145,10 +159,10 @@ export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props)
           <div className="flex items-center gap-1 justify-end mt-1">
           <span className={`w-2 h-2 rounded-full ${
             status === 'live' ? 'bg-emerald-500 animate-pulse' :
-            status === 'error' ? 'bg-yellow-400 animate-pulse' : 'bg-yellow-400 animate-pulse'
+            status === 'error' ? 'bg-red-500' : 'bg-yellow-400 animate-pulse'
           }`} />
           <span className="text-xs text-gray-400">
-            {status === 'live' ? 'live' : 'loading'}
+            {status === 'live' ? 'live' : status === 'error' ? 'connection error' : 'loading'}
           </span>
         </div>
         </div>
@@ -161,8 +175,12 @@ export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props)
         style={{ display: ticks.length < 2 ? 'none' : 'block' }}
       />
       {ticks.length < 2 && (
-        <div className="h-20 flex items-center justify-center text-gray-400 text-sm">
-          Loading price data…
+        <div className="h-20 flex flex-col items-center justify-center text-gray-400 text-xs">
+          {status === 'error' ? (
+            <span className="text-red-500 font-semibold">{errorMessage || 'Connection closed'}</span>
+          ) : (
+            <span>Loading price data…</span>
+          )}
         </div>
       )}
     </div>

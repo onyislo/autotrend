@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Menu, X, TrendingUp, Calculator, Bot, BarChart3 } from 'lucide-react';
+import { LogOut, Menu, X, TrendingUp, Calculator, Bot, BarChart3, Cpu } from 'lucide-react';
 import { logout } from '../lib/derivAuth';
 import DerivLiveChart from './DerivLiveChart';
 import DerivAppLauncher from './DerivAppLauncher';
+import AutoBotsPanel from './AutoBotsPanel';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,7 +23,7 @@ interface MeResponse {
   accountId: string | null;
 }
 
-type MainTab = 'markets' | 'accumulators' | 'digits' | 'bot' | 'risefall';
+type MainTab = 'markets' | 'auto_bots' | 'accumulators' | 'digits' | 'bot' | 'risefall';
 
 // ---------------------------------------------------------------------------
 // Logo
@@ -75,6 +76,7 @@ const MARKETS = [
 // ---------------------------------------------------------------------------
 const MAIN_TABS = [
   { id: 'markets'      as MainTab, label: 'Live Markets',   icon: BarChart3  },
+  { id: 'auto_bots'    as MainTab, label: 'Auto Bots',      icon: Cpu        },
   { id: 'accumulators' as MainTab, label: 'Accumulators',   icon: TrendingUp },
   { id: 'digits'       as MainTab, label: 'Digits',         icon: Calculator },
   { id: 'bot'          as MainTab, label: 'Bot Builder',    icon: Bot        },
@@ -363,12 +365,25 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* ── Auto Bots Tab (Proprietary Browser Executable Bots) ── */}
+          {activeTab === 'auto_bots' && (
+            <div className="space-y-4">
+              <h2 className="font-bold text-gray-900 text-lg">Auto Trading Bots</h2>
+              <AutoBotsPanel
+                wsToken={session?.wsToken ?? null}
+                userEmail={session?.accounts?.[0]?.loginid ? `${session.accountId}@deriv.local` : 'guest@deriv.local'}
+                userId={session?.accountId ?? null}
+              />
+            </div>
+          )}
+
           {/* ── Trading App tabs (Accumulators / Digits / Bot / Rise-Fall) ── */}
-          {activeTab !== 'markets' && (
+          {activeTab !== 'markets' && activeTab !== 'auto_bots' && (
             <div className="space-y-4">
               <h2 className="font-bold text-gray-900 text-lg">
                 {MAIN_TABS.find((t) => t.id === activeTab)?.label}
               </h2>
+
               <DerivAppLauncher
                 wsToken={session?.wsToken ?? null}
                 accountId={session?.accountId ?? null}

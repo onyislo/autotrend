@@ -109,6 +109,14 @@ export class DerivAPI {
     })
   }
 
+  // Get details of an active or completed contract
+  async getContractInfo(contractId: number | string): Promise<any> {
+    return this.sendRequest({
+      proposal_open_contract: 1,
+      contract_id: Number(contractId)
+    })
+  }
+
   // Get account balance
   async getBalance(): Promise<any> {
     return this.sendRequest({
