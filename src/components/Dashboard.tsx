@@ -371,7 +371,7 @@ export default function Dashboard() {
               <h2 className="font-bold text-gray-900 text-lg">Auto Trading Bots</h2>
               <AutoBotsPanel
                 wsToken={session?.wsToken ?? null}
-                userEmail={session?.accounts?.[0]?.loginid ? `${session.accountId}@deriv.local` : 'guest@deriv.local'}
+                userEmail={session?.accounts?.[0]?.loginid ? `${session?.accounts?.[0]?.loginid}@deriv.local` : 'guest@deriv.local'}
                 userId={session?.accountId ?? null}
               />
             </div>
