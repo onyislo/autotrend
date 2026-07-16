@@ -12,7 +12,7 @@ interface Props {
   label: string;
 }
 
-const WS_ENDPOINT = 'wss://ws.binaryws.com/websockets/v3?app_id=';
+const WS_ENDPOINT = 'wss://ws.derivws.com/websockets/v3?app_id=';
 const APP_ID = import.meta.env.VITE_DERIV_APP_ID ?? '1089';
 const MAX_TICKS = 60;
 
@@ -30,17 +30,8 @@ export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props)
     setChange(0);
     setStatus('connecting');
 
-    let ws: WebSocket;
-
-    // Use the OTP WebSocket URL if available, otherwise fall back to public WS
-    if (wsUrl && wsToken) {
-      const url = new URL(wsUrl);
-      url.searchParams.set('otp', wsToken);
-      ws = new WebSocket(url.toString());
-    } else {
-      ws = new WebSocket(`${WS_ENDPOINT}${APP_ID}`);
-    }
-
+    // Always connect directly to the public Deriv WebSocket for instant public tick data
+    const ws = new WebSocket(`${WS_ENDPOINT}${APP_ID}`);
     wsRef.current = ws;
 
     ws.onopen = () => {

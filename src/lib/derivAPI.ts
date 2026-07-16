@@ -137,10 +137,20 @@ export class DerivAPI {
 
 // Predefined synthetic indices symbols
 export const SYNTHETIC_INDICES = {
+  'Volatility 10 Index': 'R_10',
+  'Volatility 25 Index': 'R_25',
+  'Volatility 50 Index': 'R_50',
   'Volatility 75 Index': 'R_75',
   'Volatility 100 Index': 'R_100',
+  'Volatility 10 (1s) Index': '1HZ10V',
+  'Volatility 25 (1s) Index': '1HZ25V',
+  'Volatility 50 (1s) Index': '1HZ50V',
+  'Volatility 75 (1s) Index': '1HZ75V',
+  'Volatility 100 (1s) Index': '1HZ100V',
+  'Crash 300 Index': 'CRASH300N',
   'Crash 500 Index': 'CRASH500',
   'Crash 1000 Index': 'CRASH1000',
+  'Boom 300 Index': 'BOOM300N',
   'Boom 500 Index': 'BOOM500',
   'Boom 1000 Index': 'BOOM1000',
   'Step Index': 'STEPINDEX',

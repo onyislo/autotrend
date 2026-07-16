@@ -70,87 +70,93 @@ export default function DerivAppLauncher({ wsToken, accountId, focusApp }: Props
     else popup.focus();
   };
 
-  // If a specific app is focused, show it prominently at the top
   const focused = focusApp ? APPS.find((a) => a.id === focusApp) : null;
 
+  if (!wsToken) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
+        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-gray-700 font-semibold text-lg">Setting up your trading workspace…</p>
+        <p className="text-sm text-gray-500 mt-1 max-w-sm">
+          Please wait while we establish a secure connection to your Deriv session.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Focused app — large launch card */}
-      {focused && (
-        <div className={`rounded-xl border-2 p-6 ${wsToken ? colorMap[focused.color] : 'bg-gray-50 border-gray-200'}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${wsToken ? iconBg[focused.color] : 'bg-gray-100 text-gray-400'}`}>
-              <focused.icon size={28} />
+    <div className="space-y-6">
+      {/* Embedded application container if an app is selected */}
+      {focused ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-bold text-gray-800 text-sm">
+                Connected to {focused.label}
+              </span>
+              {accountId && (
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-mono">
+                  {accountId}
+                </span>
+              )}
             </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold">{focused.label}</h3>
-              <p className="text-sm opacity-70 mt-0.5">{focused.desc}</p>
+            
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => openApp(focused)}
+                className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-semibold transition-colors"
+                title="Open in a larger standalone window"
+              >
+                <span>Standalone Window</span>
+                <ExternalLink size={13} />
+              </button>
             </div>
-            <button
-              onClick={() => openApp(focused)}
-              disabled={!wsToken}
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
-                wsToken
-                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              <ExternalLink size={16} />
-              {wsToken ? 'Open App' : 'Loading…'}
-            </button>
           </div>
 
-          {!wsToken && (
-            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-4">
-              Your session is loading. The button will activate in a moment.
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden h-[750px] relative">
+            <iframe
+              src={focused.url(wsToken)}
+              title={focused.label}
+              className="w-full h-full border-0"
+              allow="clipboard-write; camera; geolocation"
+            />
+          </div>
+        </div>
+      ) : (
+        /* Grid view fallback if no app is active */
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <div className="mb-6">
+            <h3 className="font-bold text-gray-900 text-lg">All Trading Apps</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Select one of the workspace tools below to load it.
             </p>
-          )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {APPS.map((app) => (
+              <button
+                key={app.id}
+                onClick={() => openApp(app)}
+                className={`flex flex-col items-start gap-3 p-5 rounded-2xl border-2 transition-all text-left group ${
+                  colorMap[app.color]
+                } hover:shadow-md`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg[app.color]}`}>
+                  <app.icon size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1 font-bold text-sm text-gray-800">
+                    {app.label}
+                    <ExternalLink size={12} className="opacity-40 group-hover:opacity-80 transition-opacity" />
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1 leading-relaxed">{app.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
-
-      {/* All apps grid */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="font-bold text-gray-900">All Trading Apps</h3>
-            {accountId && (
-              <p className="text-xs text-gray-400 mt-0.5">Account: {accountId}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {APPS.map((app) => (
-            <button
-              key={app.id}
-              onClick={() => openApp(app)}
-              disabled={!wsToken}
-              className={`flex flex-col items-start gap-2 p-4 rounded-xl border-2 transition-all text-left group ${
-                wsToken
-                  ? `${colorMap[app.color]} hover:shadow-md ${focusApp === app.id ? 'ring-2 ring-offset-1 ring-emerald-400' : ''}`
-                  : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-              }`}
-            >
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${wsToken ? iconBg[app.color] : 'bg-gray-100 text-gray-400'}`}>
-                <app.icon size={18} />
-              </div>
-              <div>
-                <div className="flex items-center gap-1 font-semibold text-sm">
-                  {app.label}
-                  {wsToken && <ExternalLink size={11} className="opacity-40 group-hover:opacity-80 transition-opacity" />}
-                </div>
-                <p className="text-xs opacity-60 mt-0.5 leading-snug">{app.desc}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {!wsToken && (
-          <p className="text-xs text-gray-400 text-center mt-3">
-            Setting up your session…
-          </p>
-        )}
-      </div>
     </div>
   );
 }

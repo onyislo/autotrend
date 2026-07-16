@@ -1,0 +1,16 @@
+<xml xmlns="http://www.w3.org/1999/xhtml" collection="false">
+  <!-- AutoTrend X: Volatility Trend Rider Bot Template -->
+  <!-- Replace this content with your exported XML from app.deriv.com/bot -->
+  <variables>
+    <variable type="" id="direction">direction</variable>
+  </variables>
+  <block type="trade_definition" id="trade_def" x="0" y="0">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="market_def">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">R_25</field>
+      </block>
+    </statement>
+  </block>
+</xml>
