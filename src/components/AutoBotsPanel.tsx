@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Plus, ShieldAlert, BarChart3, TrendingUp, Cpu, History, Trash2 } from 'lucide-react';
+import { Play, Pause, Plus, ShieldAlert, BarChart3, TrendingUp, Cpu, History, Trash2, Bot } from 'lucide-react';
 import { derivAPI, SYNTHETIC_INDICES } from '../lib/derivAPI';
 import { supabase } from '../lib/supabase';
 
@@ -38,43 +38,11 @@ interface Props {
   userId: string | null;
 }
 
-// Fallback premium bots pre-loaded in the code in case the database isn't fully migrated yet
-const DEFAULT_BOTS: Bot[] = [
-  {
-    id: 'default-martingale-v75',
-    name: 'Admin Martingale (Volatility 75)',
-    description: 'Proprietary trend-following martingale strategy. Automatically doubles stake on loss to secure recovery.',
-    is_public: true,
-    strategy: {
-      symbol: 'R_75',
-      contractType: 'CALL',
-      amount: 1,
-      duration: 5,
-      martingale: true,
-      martingaleMultiplier: 2,
-      maxMartingaleSteps: 4,
-      stopLoss: 25,
-      takeProfit: 50,
-    }
-  },
-  {
-    id: 'default-digit-scalper',
-    name: 'Admin Volatility 100 Scalper',
-    description: 'High-speed scalp trades targeting short momentum shifts. Ideal for volatile market sweeps.',
-    is_public: true,
-    strategy: {
-      symbol: 'R_100',
-      contractType: 'PUT',
-      amount: 2,
-      duration: 5,
-      martingale: true,
-      martingaleMultiplier: 1.8,
-      maxMartingaleSteps: 3,
-      stopLoss: 30,
-      takeProfit: 60,
-    }
-  }
-];
+// Admin Deriv account ID — set via environment variable, never hardcoded
+const ADMIN_ACCOUNT_ID = import.meta.env.VITE_ADMIN_ACCOUNT_ID ?? '';
+
+// No hardcoded bots — all bots come from Supabase
+const DEFAULT_BOTS: Bot[] = [];
 
 export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
   const [bots, setBots] = useState<Bot[]>(DEFAULT_BOTS);
@@ -108,8 +76,8 @@ export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
   const isRunningRef = useRef(false);
   const runningBotIdRef = useRef<string | null>(null);
   
-  // Check if current user is admin
-  const isAdmin = userEmail === 'bradeyonyiso@gmail.com';
+  // Check if current user is admin — matches against VITE_ADMIN_ACCOUNT_ID env var
+  const isAdmin = !!(userId && ADMIN_ACCOUNT_ID && userId === ADMIN_ACCOUNT_ID);
 
   useEffect(() => {
     loadBots();
@@ -120,13 +88,15 @@ export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
       const { data, error } = await supabase
         .from('trading_bots')
         .select('*')
-        .eq('is_public', true);
-      
-      if (!error && data && data.length > 0) {
-        setBots([...DEFAULT_BOTS, ...data]);
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setBots(data);
       }
     } catch {
-      // Fall back to DEFAULT_BOTS if table/policy doesn't exist yet
+      // Supabase unavailable — show empty list
+      setBots([]);
     }
   };
 
@@ -491,6 +461,15 @@ export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {bots.length === 0 && (
+            <div className="col-span-2 text-center py-16 text-gray-400">
+              <Bot size={40} className="mx-auto mb-3 text-gray-300" />
+              <p className="font-medium text-gray-500">No bots available yet.</p>
+              {isAdmin && (
+                <p className="text-xs text-gray-400 mt-1">Use the Admin panel above to create and publish your first bot.</p>
+              )}
+            </div>
+          )}
           {bots.map((bot) => (
             <div
               key={bot.id}

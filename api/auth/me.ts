@@ -46,32 +46,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const accounts = accountsPayload.data ?? [];
 
-    // Fetch OTP/WS token for the chosen account
-    let wsToken: string | null = null;
-    let wsUrl: string | null = null;
-
-    if (accountId) {
-      try {
-        const otpRes = await fetch(
-          `https://api.derivws.com/trading/v1/options/accounts/${encodeURIComponent(accountId)}/otp`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Deriv-App-ID': appId,
-            },
-          }
-        );
-        if (otpRes.ok) {
-          const otpPayload = (await otpRes.json()) as { data?: { url?: string } };
-          wsUrl = otpPayload.data?.url ?? null;
-          const m = wsUrl?.match(/[?&]otp=([^&]+)/);
-          wsToken = m?.[1] ?? null;
-        }
-      } catch {
-        // Best-effort
-      }
-    }
+    // Pass the OAuth access token directly as wsToken —
+    // the Deriv WebSocket authorize call accepts OAuth tokens.
+    // wsUrl uses the standard Deriv WS endpoint with the app_id.
+    const wsToken: string = token;
+    const wsUrl: string = `wss://ws.derivws.com/websockets/v3?app_id=${appId}&l=EN&brand=deriv`;
 
     return res.status(200).json({ accounts, wsToken, wsUrl, accountId });
   } catch (err) {

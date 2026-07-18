@@ -5,50 +5,88 @@ export class DerivAPI {
   private messageQueue: any[] = []
   private requestId = 0
   private callbacks: Map<number, (response: any) => void> = new Map()
+  private connectResolve: (() => void) | null = null
+  private connectReject: ((e: any) => void) | null = null
 
   constructor(private appId: string) {}
 
   connect(): Promise<void> {
+    // If already open, resolve immediately
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      return Promise.resolve();
+    }
+
+    // Close any stale socket
+    if (this.ws) {
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onerror = null;
+      this.ws.onclose = null;
+      this.ws.close();
+      this.ws = null;
+    }
+
     return new Promise((resolve, reject) => {
+      this.connectResolve = resolve;
+      this.connectReject = reject;
+
       try {
-        this.ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${this.appId}`)
-        
+        // Use the correct Deriv WS endpoint
+        this.ws = new WebSocket(
+          `wss://ws.derivws.com/websockets/v3?app_id=${this.appId}&l=EN&brand=deriv`
+        );
+
         this.ws.onopen = () => {
-          this.isConnected = true
-          console.log('Connected to Deriv API')
-          
-          // Process queued messages
+          this.isConnected = true;
+          console.log('[DerivAPI] Connected');
+          // Flush queued messages
           while (this.messageQueue.length > 0) {
-            const message = this.messageQueue.shift()
-            this.ws?.send(JSON.stringify(message))
+            const msg = this.messageQueue.shift();
+            this.ws?.send(JSON.stringify(msg));
           }
-          
-          resolve()
-        }
+          this.connectResolve?.();
+          this.connectResolve = null;
+          this.connectReject = null;
+        };
 
         this.ws.onmessage = (event) => {
-          const response = JSON.parse(event.data)
-          
-          if (response.req_id && this.callbacks.has(response.req_id)) {
-            const callback = this.callbacks.get(response.req_id)!
-            callback(response)
-            this.callbacks.delete(response.req_id)
+          try {
+            const response = JSON.parse(event.data);
+            if (response.req_id && this.callbacks.has(response.req_id)) {
+              const cb = this.callbacks.get(response.req_id)!;
+              this.callbacks.delete(response.req_id);
+              cb(response);
+            }
+          } catch (e) {
+            console.error('[DerivAPI] Failed to parse message', e);
           }
-        }
+        };
 
         this.ws.onerror = (error) => {
-          console.error('Deriv API WebSocket error:', error)
-          reject(error)
-        }
+          console.error('[DerivAPI] WebSocket error:', error);
+          this.connectReject?.(new Error('WebSocket connection failed'));
+          this.connectResolve = null;
+          this.connectReject = null;
+        };
 
         this.ws.onclose = () => {
-          this.isConnected = false
-          console.log('Disconnected from Deriv API')
-        }
+          this.isConnected = false;
+          console.log('[DerivAPI] Disconnected');
+        };
+
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          if (this.connectReject) {
+            this.connectReject(new Error('Connection timeout'));
+            this.connectResolve = null;
+            this.connectReject = null;
+          }
+        }, 10000);
+
       } catch (error) {
-        reject(error)
+        reject(error);
       }
-    })
+    });
   }
 
   private sendRequest(request: any): Promise<any> {
