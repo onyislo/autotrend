@@ -109,7 +109,7 @@ export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
   const runningBotIdRef = useRef<string | null>(null);
   
   // Check if current user is admin
-  const isAdmin = userEmail === 'otienowill833@gmail.com';
+  const isAdmin = userEmail === 'bradeyonyiso@gmail.com';
 
   useEffect(() => {
     loadBots();
