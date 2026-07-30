@@ -1,6 +1,7 @@
 // Deriv OAuth 2.0 with PKCE - copied from deriv-trading-app/app/SignInClient.tsx
 const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33MJcHX2yZOr6lkeIP9Mg';
-const REDIRECT_URI = 'https://autotrendx.qzz.io/auth/callback';
+// Must match exactly what's in the serverless function AND Deriv app settings
+const REDIRECT_URI = 'https://autotrendx.qzz.io/api/auth/callback';
 
 // ── PKCE helpers (copied from deriv-trading-app) ──────────────────────────────
 function base64UrlEncode(value: Uint8Array | ArrayBuffer): string {
@@ -30,6 +31,9 @@ export const loginWithDeriv = async (): Promise<void> => {
   // Also store in localStorage as backup in case sessionStorage is cleared
   localStorage.setItem('pkce_verifier_backup', codeVerifier);
   localStorage.setItem('oauth_state_backup', state);
+  // Store in cookies for the serverless /api/auth/callback function
+  document.cookie = `pkce_verifier=${encodeURIComponent(codeVerifier)}; path=/; max-age=600; SameSite=Lax`;
+  document.cookie = `oauth_state=${encodeURIComponent(state)}; path=/; max-age=600; SameSite=Lax`;
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -151,6 +155,11 @@ export const handleCallback = async (): Promise<boolean> => {
 
 export const isLoggedIn = (): boolean => {
   if (sessionStorage.getItem('auth_status') === 'authenticated') return true;
+  // Check cookie set by serverless function
+  if (document.cookie.includes('deriv_session=1')) {
+    sessionStorage.setItem('auth_status', 'authenticated');
+    return true;
+  }
   const data = localStorage.getItem('deriv_auth');
   if (data) { sessionStorage.setItem('auth_status', 'authenticated'); return true; }
   return false;
