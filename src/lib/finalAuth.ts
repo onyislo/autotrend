@@ -1,8 +1,8 @@
-// Deriv OAuth 2.0 with PKCE - matches deriv-trading-app implementation
-const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33LvvK8qit4Q2yXrRMiPAY';
+// Deriv OAuth 2.0 with PKCE - copied from deriv-trading-app/app/SignInClient.tsx
+const DERIV_APP_ID = import.meta.env.VITE_DERIV_APP_ID || '33MJcHX2yZOr6lkeIP9Mg';
 const REDIRECT_URI = 'https://autotrendx.qzz.io/auth/callback';
 
-// PKCE helpers - exact same as deriv-trading-app
+// ── PKCE helpers (copied from deriv-trading-app) ──────────────────────────────
 function base64UrlEncode(value: Uint8Array | ArrayBuffer): string {
   const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
   let binary = '';
@@ -20,12 +20,11 @@ async function createPkcePair() {
   return { codeVerifier, codeChallenge };
 }
 
-// Login - matches SignInClient.tsx from deriv-trading-app
-export const loginWithDeriv = async () => {
+// ── Login - copied from deriv-trading-app/app/SignInClient.tsx ────────────────
+export const loginWithDeriv = async (): Promise<void> => {
   const { codeVerifier, codeChallenge } = await createPkcePair();
   const state = crypto.randomUUID();
 
-  // Store in sessionStorage (not cookies since we have no server)
   sessionStorage.setItem('pkce_verifier', codeVerifier);
   sessionStorage.setItem('oauth_state', state);
 
@@ -39,11 +38,11 @@ export const loginWithDeriv = async () => {
     code_challenge_method: 'S256',
   });
 
-  console.log('🚀 Redirecting to Deriv OAuth:', `https://auth.deriv.com/oauth2/auth?${params.toString()}`);
+  console.log('🚀 Redirecting to:', `https://auth.deriv.com/oauth2/auth?${params.toString()}`);
   window.location.assign(`https://auth.deriv.com/oauth2/auth?${params.toString()}`);
 };
 
-// Callback handler - matches callback/route.ts from deriv-trading-app
+// ── Callback - copied from deriv-trading-app/app/api/auth/callback/route.ts ──
 export const handleCallback = async (): Promise<boolean> => {
   const urlParams = new URLSearchParams(window.location.search);
 
@@ -59,12 +58,12 @@ export const handleCallback = async (): Promise<boolean> => {
   const codeVerifier = sessionStorage.getItem('pkce_verifier');
 
   if (!code || !codeVerifier) {
-    console.error('❌ Missing code or code verifier');
+    console.error('❌ Missing code or verifier');
     return false;
   }
 
   if (returnedState && storedState && returnedState !== storedState) {
-    console.error('❌ State mismatch - possible CSRF attack');
+    console.error('❌ State mismatch');
     return false;
   }
 
@@ -92,46 +91,54 @@ export const handleCallback = async (): Promise<boolean> => {
 
     console.log('✅ Token received, fetching accounts...');
 
-    // Fetch accounts using the access token
-    let account = null;
+    // Fetch accounts - copied from deriv-trading-app callback route
+    let accountId = null;
+    let accountType = 'real';
+    let currency = 'USD';
+
     try {
-      const accountsResponse = await fetch('https://api.derivws.com/trading/v1/options/accounts', {
+      const accountsRes = await fetch('https://api.derivws.com/trading/v1/options/accounts', {
         headers: {
           Authorization: `Bearer ${tokenData.access_token}`,
           'Deriv-App-ID': DERIV_APP_ID,
         },
       });
 
-      if (accountsResponse.ok) {
-        const accountsData = await accountsResponse.json() as { data?: Array<{ account_id?: string; account_type?: string; currency?: string }> };
+      if (accountsRes.ok) {
+        const accountsData = await accountsRes.json() as {
+          data?: Array<{ account_id?: string; account_type?: string; currency?: string }>
+        };
         const accounts = accountsData.data ?? [];
-        account = accounts.find(a => a.account_type !== 'demo') ?? accounts[0];
-        console.log('✅ Accounts fetched:', accounts.length);
+        const real = accounts.find(a => a.account_type !== 'demo');
+        const chosen = real ?? accounts[0];
+        if (chosen) {
+          accountId = chosen.account_id;
+          accountType = chosen.account_type ?? 'real';
+          currency = chosen.currency ?? 'USD';
+        }
+        console.log('✅ Accounts:', accounts.length);
       }
     } catch (e) {
       console.warn('⚠️ Could not fetch accounts:', e);
     }
 
-    // Store auth data
     localStorage.setItem('deriv_auth', JSON.stringify({
       access_token: tokenData.access_token,
-      account_id: account?.account_id,
-      account_type: account?.account_type,
-      currency: account?.currency || 'USD',
+      account: accountId,
+      account_type: accountType,
+      currency,
       timestamp: Date.now()
     }));
     sessionStorage.setItem('auth_status', 'authenticated');
-
-    // Clean up
     sessionStorage.removeItem('pkce_verifier');
     sessionStorage.removeItem('oauth_state');
 
-    console.log('✅ Login complete, redirecting to dashboard...');
+    console.log('✅ Auth complete → dashboard');
     window.location.href = '/dashboard';
     return true;
 
   } catch (err) {
-    console.error('❌ Token exchange error:', err);
+    console.error('❌ Error:', err);
     return false;
   }
 };
