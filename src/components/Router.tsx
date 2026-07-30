@@ -16,9 +16,10 @@ export default function Router() {
 
     const isCallbackPath = path === '/auth/callback';
     const hasCode = params.has('code');
-    const hasError = params.has('error');
+    const hasError = params.has('error') || params.has('error_description');
+    const isDerivError = params.get('error') === 'missing_params' || params.has('error');
 
-    if (isCallbackPath || hasCode || hasError) {
+    if (isCallbackPath || hasCode || hasError || isDerivError) {
       console.log('Processing OAuth callback...');
 
       if (hasError) {

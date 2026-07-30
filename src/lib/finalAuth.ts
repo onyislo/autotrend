@@ -27,6 +27,9 @@ export const loginWithDeriv = async (): Promise<void> => {
 
   sessionStorage.setItem('pkce_verifier', codeVerifier);
   sessionStorage.setItem('oauth_state', state);
+  // Also store in localStorage as backup in case sessionStorage is cleared
+  localStorage.setItem('pkce_verifier_backup', codeVerifier);
+  localStorage.setItem('oauth_state_backup', state);
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -54,8 +57,9 @@ export const handleCallback = async (): Promise<boolean> => {
 
   const code = urlParams.get('code');
   const returnedState = urlParams.get('state');
-  const storedState = sessionStorage.getItem('oauth_state');
-  const codeVerifier = sessionStorage.getItem('pkce_verifier');
+  // Check sessionStorage first, fallback to localStorage
+  const storedState = sessionStorage.getItem('oauth_state') || localStorage.getItem('oauth_state_backup');
+  const codeVerifier = sessionStorage.getItem('pkce_verifier') || localStorage.getItem('pkce_verifier_backup');
 
   if (!code || !codeVerifier) {
     console.error('❌ Missing code or verifier');
@@ -132,6 +136,8 @@ export const handleCallback = async (): Promise<boolean> => {
     sessionStorage.setItem('auth_status', 'authenticated');
     sessionStorage.removeItem('pkce_verifier');
     sessionStorage.removeItem('oauth_state');
+    localStorage.removeItem('pkce_verifier_backup');
+    localStorage.removeItem('oauth_state_backup');
 
     console.log('✅ Auth complete → dashboard');
     window.location.href = '/dashboard';
