@@ -85,7 +85,7 @@ function AuthModal({ mode, onClose }: { mode: 'login' | 'register'; onClose: () 
 
   const handleDerivLogin = () => {
     setLoading(true);
-    loginWithDeriv();
+    loginWithDeriv().catch(() => setLoading(false));
   };
 
   return (
