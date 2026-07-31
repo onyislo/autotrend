@@ -440,7 +440,7 @@ export default function Dashboard() {
         )}
 
         {/* Main content */}
-        <main className={`flex-1 overflow-y-auto ${activeTab === 'charts' ? 'p-0' : 'px-4 py-6'}`}>
+        <main className={`flex-1 overflow-y-auto ${['charts', 'botbuilder'].includes(activeTab) ? 'p-0' : 'px-4 py-6'}`}>
 
           {/* Dashboard */}
           {activeTab === 'dashboard' && (
