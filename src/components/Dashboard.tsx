@@ -4,8 +4,8 @@ import {
   ChevronRight, Activity, Menu, X, LayoutDashboard,
   Copy, ChevronLeft, Repeat
 } from 'lucide-react';
-import DerivLiveChart from './DerivLiveChart';
 import BotBuilder from './BotBuilder';
+import ChartsSection from './ChartsSection';
 
 function Logo({ size = 28 }: { size?: number }) {
   return (
@@ -437,7 +437,7 @@ export default function Dashboard() {
         )}
 
         {/* Main content */}
-        <main className="flex-1 px-4 py-6 overflow-y-auto">
+        <main className={`flex-1 overflow-y-auto ${activeTab === 'charts' ? 'p-0' : 'px-4 py-6'}`}>
 
           {/* Dashboard */}
           {activeTab === 'dashboard' && (
@@ -500,20 +500,7 @@ export default function Dashboard() {
             <BotBuilder wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} />
           )}
 
-          {activeTab === 'charts' && (
-            <div className="max-w-7xl mx-auto space-y-4">
-              <h2 className="font-bold text-gray-900 text-lg">Live Charts</h2>
-              <p className="text-sm text-gray-500">Real-time price data streamed directly from Deriv WebSocket API.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                <DerivLiveChart symbol="R_100" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Volatility 100 Index" />
-                <DerivLiveChart symbol="R_75" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Volatility 75 Index" />
-                <DerivLiveChart symbol="R_50" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Volatility 50 Index" />
-                <DerivLiveChart symbol="R_25" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Volatility 25 Index" />
-                <DerivLiveChart symbol="1HZ100V" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Volatility 100 (1s) Index" />
-                <DerivLiveChart symbol="CRASH500" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Crash 500 Index" />
-              </div>
-            </div>
-          )}
+          {activeTab === 'charts' && <ChartsSection />}
 
           {['quickbot', 'autotrade', 'copytrader'].includes(activeTab) && (
             <div className="flex flex-col items-center justify-center py-24 text-center max-w-7xl mx-auto">
