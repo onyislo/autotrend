@@ -6,21 +6,18 @@ interface MarketItem { symbol: string; name: string; subcategory: string; }
 type ChartType = 'line' | 'area' | 'candle';
 
 const MARKETS: MarketItem[] = [
-  { symbol: '1HZ10V',  name: 'Volatility 10 (1s) Index',  subcategory: 'Continuous Indices' },
   { symbol: '1HZ25V',  name: 'Volatility 25 (1s) Index',  subcategory: 'Continuous Indices' },
+  { symbol: '1HZ10V',  name: 'Volatility 10 (1s) Index',  subcategory: 'Continuous Indices' },
   { symbol: '1HZ50V',  name: 'Volatility 50 (1s) Index',  subcategory: 'Continuous Indices' },
   { symbol: '1HZ75V',  name: 'Volatility 75 (1s) Index',  subcategory: 'Continuous Indices' },
   { symbol: '1HZ100V', name: 'Volatility 100 (1s) Index', subcategory: 'Continuous Indices' },
-  { symbol: 'R_10',    name: 'Volatility 10 Index',        subcategory: 'Continuous Indices' },
-  { symbol: 'R_25',    name: 'Volatility 25 Index',        subcategory: 'Continuous Indices' },
+  { symbol: 'R_100',   name: 'Volatility 100 Index',       subcategory: 'Continuous Indices' },
   { symbol: 'R_50',    name: 'Volatility 50 Index',        subcategory: 'Continuous Indices' },
   { symbol: 'R_75',    name: 'Volatility 75 Index',        subcategory: 'Continuous Indices' },
-  { symbol: 'R_100',   name: 'Volatility 100 Index',       subcategory: 'Continuous Indices' },
-  { symbol: 'JD10',    name: 'Jump 10 Index',   subcategory: 'Jump Indices' },
-  { symbol: 'JD25',    name: 'Jump 25 Index',   subcategory: 'Jump Indices' },
-  { symbol: 'JD50',    name: 'Jump 50 Index',   subcategory: 'Jump Indices' },
-  { symbol: 'JD75',    name: 'Jump 75 Index',   subcategory: 'Jump Indices' },
-  { symbol: 'JD100',   name: 'Jump 100 Index',  subcategory: 'Jump Indices' },
+  { symbol: 'R_10',    name: 'Volatility 10 Index',        subcategory: 'Continuous Indices' },
+  { symbol: '1HZ15V',  name: 'Volatility 15 (1s) Index',  subcategory: 'Continuous Indices' },
+  { symbol: '1HZ30V',  name: 'Volatility 30 (1s) Index',  subcategory: 'Continuous Indices' },
+  { symbol: '1HZ90V',  name: 'Volatility 90 (1s) Index',  subcategory: 'Continuous Indices' },
   { symbol: 'CRASH500',  name: 'Crash 500 Index',  subcategory: 'Crash/Boom' },
   { symbol: 'CRASH1000', name: 'Crash 1000 Index', subcategory: 'Crash/Boom' },
   { symbol: 'BOOM500',   name: 'Boom 500 Index',   subcategory: 'Crash/Boom' },
@@ -204,7 +201,7 @@ function ChartCanvas({ ticks, chartType, status, errorMsg, onRetry }: {
 }
 
 export default function ChartsSection() {
-  const [selected, setSelected] = useState<MarketItem>(MARKETS[1]);
+  const [selected, setSelected] = useState<MarketItem>(MARKETS[0]);
   const [ticks, setTicks] = useState<Tick[]>([]);
   const [price, setPrice] = useState<number | null>(null);
   const [change, setChange] = useState(0);
