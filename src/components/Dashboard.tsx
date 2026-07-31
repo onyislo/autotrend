@@ -278,7 +278,10 @@ export default function Dashboard() {
   const [accountMode, setAccountMode] = useState<'real' | 'demo'>('real');
 
   useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then((d: SessionData) => setSession(d)).catch(() => null);
+    fetch('/api/auth/me')
+      .then(r => { if (!r.ok) return null; return r.json(); })
+      .then((d: SessionData | null) => { if (d && Array.isArray(d.accounts)) setSession(d); })
+      .catch(() => null);
   }, []);
 
   useEffect(() => {
@@ -288,8 +291,8 @@ export default function Dashboard() {
 
   const handleLogout = async () => { await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/'; };
 
-  const realAccount = session?.accounts.find(a => a.account_type !== 'demo');
-  const demoAccount = session?.accounts.find(a => a.account_type === 'demo');
+  const realAccount = session?.accounts?.find(a => a.account_type !== 'demo');
+  const demoAccount = session?.accounts?.find(a => a.account_type === 'demo');
   const currentAccount = accountMode === 'real' ? (realAccount ?? demoAccount) : (demoAccount ?? realAccount);
   const fmt = (v?: number | string) => v !== undefined ? Number(v).toFixed(2) : '0.00';
 

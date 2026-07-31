@@ -496,7 +496,7 @@ export default function ChartsSection() {
               { type: 'line' as ChartType, Icon: TrendingUp, label: 'Line' },
               { type: 'area' as ChartType, Icon: Activity, label: 'Area' },
               { type: 'candle' as ChartType, Icon: BarChart2, label: 'Candle' },
-            ] as const).map(({ type, Icon, label }) => (
+            ]).map(({ type, Icon, label }) => (
               <button
                 key={type}
                 id={`chart-type-${type}`}
