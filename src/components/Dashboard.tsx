@@ -306,9 +306,19 @@ export default function Dashboard() {
 
       {/* Top Navbar */}
       <nav className="bg-gray-900 text-white sticky top-0 z-40 shadow-lg h-14 flex items-center px-4 gap-3">
-        {/* Hamburger - always visible */}
-        <button onClick={() => { setSidebarOpen(o => !o); setMobileMenu(false); }} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-gray-300">
-          <Menu size={20} />
+        {/* Hamburger: toggles sidebar on desktop, tab menu on mobile */}
+        <button
+          onClick={() => {
+            if (window.innerWidth < 768) {
+              setMobileMenu(m => !m);
+            } else {
+              setSidebarOpen(o => !o);
+              setMobileMenu(false);
+            }
+          }}
+          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-gray-300"
+        >
+          {mobileMenu ? <X size={20} /> : <Menu size={20} />}
         </button>
         <div className="flex items-center gap-2">
           <Logo size={28} />
@@ -346,10 +356,6 @@ export default function Dashboard() {
           </div>
           <button onClick={handleLogout} className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-sm transition-colors">
             <LogOut size={14} /><span className="hidden sm:inline">Logout</span>
-          </button>
-          {/* Mobile hamburger for tabs */}
-          <button className="md:hidden p-1.5 rounded-lg hover:bg-white/10 text-gray-300" onClick={() => setMobileMenu(m => !m)}>
-            {mobileMenu ? <X size={18} /> : <ChevronRight size={18} />}
           </button>
         </div>
       </nav>
