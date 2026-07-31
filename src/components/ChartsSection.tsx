@@ -1,76 +1,49 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Star, ChevronDown, TrendingUp, BarChart2, Activity } from 'lucide-react';
+import { Search, Star, ChevronDown, TrendingUp, BarChart2, Activity, X, AlertCircle } from 'lucide-react';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-interface Tick {
-  time: number;
-  price: number;
-}
-
-interface MarketItem {
-  symbol: string;
-  name: string;
-  category: string;
-  subcategory: string;
-}
-
+interface Tick { time: number; price: number; }
+interface MarketItem { symbol: string; name: string; subcategory: string; }
 type ChartType = 'line' | 'area' | 'candle';
 
-// ── Market Data ────────────────────────────────────────────────────────────────
 const MARKETS: MarketItem[] = [
-  // Continuous Indices
-  { symbol: '1HZ10V',  name: 'Volatility 10 (1s) Index',  category: 'Derived', subcategory: 'Continuous Indices' },
-  { symbol: '1HZ25V',  name: 'Volatility 25 (1s) Index',  category: 'Derived', subcategory: 'Continuous Indices' },
-  { symbol: '1HZ50V',  name: 'Volatility 50 (1s) Index',  category: 'Derived', subcategory: 'Continuous Indices' },
-  { symbol: '1HZ75V',  name: 'Volatility 75 (1s) Index',  category: 'Derived', subcategory: 'Continuous Indices' },
-  { symbol: '1HZ100V', name: 'Volatility 100 (1s) Index', category: 'Derived', subcategory: 'Continuous Indices' },
-  { symbol: 'R_10',    name: 'Volatility 10 Index',        category: 'Derived', subcategory: 'Continuous Indices' },
-  { symbol: 'R_25',    name: 'Volatility 25 Index',        category: 'Derived', subcategory: 'Continuous Indices' },
-  { symbol: 'R_50',    name: 'Volatility 50 Index',        category: 'Derived', subcategory: 'Continuous Indices' },
-  { symbol: 'R_75',    name: 'Volatility 75 Index',        category: 'Derived', subcategory: 'Continuous Indices' },
-  { symbol: 'R_100',   name: 'Volatility 100 Index',       category: 'Derived', subcategory: 'Continuous Indices' },
-  // Jump Indices
-  { symbol: 'JD10',    name: 'Jump 10 Index',   category: 'Derived', subcategory: 'Jump Indices' },
-  { symbol: 'JD25',    name: 'Jump 25 Index',   category: 'Derived', subcategory: 'Jump Indices' },
-  { symbol: 'JD50',    name: 'Jump 50 Index',   category: 'Derived', subcategory: 'Jump Indices' },
-  { symbol: 'JD75',    name: 'Jump 75 Index',   category: 'Derived', subcategory: 'Jump Indices' },
-  { symbol: 'JD100',   name: 'Jump 100 Index',  category: 'Derived', subcategory: 'Jump Indices' },
-  // Crash & Boom
-  { symbol: 'CRASH300N',  name: 'Crash 300 Index',   category: 'Derived', subcategory: 'Crash/Boom' },
-  { symbol: 'CRASH500',   name: 'Crash 500 Index',   category: 'Derived', subcategory: 'Crash/Boom' },
-  { symbol: 'CRASH1000',  name: 'Crash 1000 Index',  category: 'Derived', subcategory: 'Crash/Boom' },
-  { symbol: 'BOOM300N',   name: 'Boom 300 Index',    category: 'Derived', subcategory: 'Crash/Boom' },
-  { symbol: 'BOOM500',    name: 'Boom 500 Index',    category: 'Derived', subcategory: 'Crash/Boom' },
-  { symbol: 'BOOM1000',   name: 'Boom 1000 Index',   category: 'Derived', subcategory: 'Crash/Boom' },
-  // Step Index
-  { symbol: 'STPIDX',    name: 'Step Index',         category: 'Derived', subcategory: 'Step Indices' },
+  { symbol: '1HZ10V',  name: 'Volatility 10 (1s) Index',  subcategory: 'Continuous Indices' },
+  { symbol: '1HZ25V',  name: 'Volatility 25 (1s) Index',  subcategory: 'Continuous Indices' },
+  { symbol: '1HZ50V',  name: 'Volatility 50 (1s) Index',  subcategory: 'Continuous Indices' },
+  { symbol: '1HZ75V',  name: 'Volatility 75 (1s) Index',  subcategory: 'Continuous Indices' },
+  { symbol: '1HZ100V', name: 'Volatility 100 (1s) Index', subcategory: 'Continuous Indices' },
+  { symbol: 'R_10',    name: 'Volatility 10 Index',        subcategory: 'Continuous Indices' },
+  { symbol: 'R_25',    name: 'Volatility 25 Index',        subcategory: 'Continuous Indices' },
+  { symbol: 'R_50',    name: 'Volatility 50 Index',        subcategory: 'Continuous Indices' },
+  { symbol: 'R_75',    name: 'Volatility 75 Index',        subcategory: 'Continuous Indices' },
+  { symbol: 'R_100',   name: 'Volatility 100 Index',       subcategory: 'Continuous Indices' },
+  { symbol: 'JD10',    name: 'Jump 10 Index',   subcategory: 'Jump Indices' },
+  { symbol: 'JD25',    name: 'Jump 25 Index',   subcategory: 'Jump Indices' },
+  { symbol: 'JD50',    name: 'Jump 50 Index',   subcategory: 'Jump Indices' },
+  { symbol: 'JD75',    name: 'Jump 75 Index',   subcategory: 'Jump Indices' },
+  { symbol: 'JD100',   name: 'Jump 100 Index',  subcategory: 'Jump Indices' },
+  { symbol: 'CRASH500',  name: 'Crash 500 Index',  subcategory: 'Crash/Boom' },
+  { symbol: 'CRASH1000', name: 'Crash 1000 Index', subcategory: 'Crash/Boom' },
+  { symbol: 'BOOM500',   name: 'Boom 500 Index',   subcategory: 'Crash/Boom' },
+  { symbol: 'BOOM1000',  name: 'Boom 1000 Index',  subcategory: 'Crash/Boom' },
+  { symbol: 'STPIDX',    name: 'Step Index',        subcategory: 'Step Indices' },
 ];
 
-const WS_ENDPOINT = 'wss://ws.derivws.com/websockets/v3?app_id=36544';
+const WS_URL = 'wss://ws.derivws.com/websockets/v3?app_id=36544';
 const MAX_TICKS = 200;
 
-// ── Mini Sparkline bar icon (like Deriv's market list icons) ──────────────────
-function SparkIcon({ up }: { up: boolean }) {
+function SparkIcon() {
   return (
     <div className="w-8 h-5 flex items-end gap-px">
-      {[3, 5, 2, 6, 4, 7, 3].map((h, i) => (
-        <div
-          key={i}
-          className={`flex-1 rounded-sm ${up ? 'bg-emerald-500' : 'bg-red-400'}`}
-          style={{ height: `${(h / 7) * 100}%`, opacity: 0.6 + i * 0.05 }}
-        />
+      {[3,5,2,6,4,7,3].map((h, i) => (
+        <div key={i} className="flex-1 rounded-sm bg-emerald-500"
+          style={{ height: `${(h/7)*100}%`, opacity: 0.5 + i*0.07 }} />
       ))}
     </div>
   );
 }
 
-// ── Chart Canvas ──────────────────────────────────────────────────────────────
-function ChartCanvas({
-  ticks,
-  chartType,
-}: {
-  ticks: Tick[];
-  chartType: ChartType;
+function ChartCanvas({ ticks, chartType, status, errorMsg }: {
+  ticks: Tick[]; chartType: ChartType; status: string; errorMsg: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -83,6 +56,8 @@ function ChartCanvas({
     const dpr = window.devicePixelRatio || 1;
     const W = container.clientWidth;
     const H = container.clientHeight;
+    if (W === 0 || H === 0) return;
+
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     canvas.style.width = `${W}px`;
@@ -91,166 +66,88 @@ function ChartCanvas({
     const ctx = canvas.getContext('2d')!;
     ctx.scale(dpr, dpr);
 
-    const PAD_LEFT = 10;
-    const PAD_RIGHT = 90; // price scale
-    const PAD_TOP = 24;
-    const PAD_BOTTOM = 28; // time axis
-
-    const prices = ticks.map((t) => t.price);
+    const PL = 10, PR = 90, PT = 20, PB = 28;
+    const prices = ticks.map(t => t.price);
     const min = Math.min(...prices);
     const max = Math.max(...prices);
     const range = max - min || 1;
 
-    const scaleX = (i: number) =>
-      PAD_LEFT + (i / (ticks.length - 1)) * (W - PAD_LEFT - PAD_RIGHT);
-    const scaleY = (p: number) =>
-      PAD_TOP + (1 - (p - min) / range) * (H - PAD_TOP - PAD_BOTTOM);
+    const sx = (i: number) => PL + (i / (ticks.length - 1)) * (W - PL - PR);
+    const sy = (p: number) => PT + (1 - (p - min) / range) * (H - PT - PB);
 
-    // ── Grid lines ──────────────────────────────────────────────────
+    // Grid
     ctx.strokeStyle = '#f0f0f0';
     ctx.lineWidth = 1;
-    const gridLines = 6;
-    for (let i = 0; i <= gridLines; i++) {
-      const y = PAD_TOP + (i / gridLines) * (H - PAD_TOP - PAD_BOTTOM);
+    for (let i = 0; i <= 6; i++) {
+      const y = PT + (i/6)*(H-PT-PB);
+      ctx.beginPath(); ctx.moveTo(PL,y); ctx.lineTo(W-PR,y); ctx.stroke();
+      const p = max - (i/6)*range;
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '10px system-ui';
+      ctx.textAlign = 'left';
+      ctx.fillText(p.toFixed(2), W-PR+6, y+4);
+    }
+
+    // Time labels
+    ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'center';
+    [0,1,2,3,4,5,6].forEach(i => {
+      const idx = Math.round((i/6)*(ticks.length-1));
+      const d = new Date(ticks[idx].time*1000);
+      const lbl = d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      ctx.fillText(lbl, sx(idx), H-6);
+    });
+
+    const isUp = ticks[ticks.length-1].price >= ticks[0].price;
+    const col = isUp ? '#1d4ed8' : '#ef4444';
+
+    if (chartType === 'area') {
+      const grad = ctx.createLinearGradient(0,PT,0,H-PB);
+      grad.addColorStop(0, isUp ? 'rgba(59,130,246,0.2)' : 'rgba(239,68,68,0.2)');
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.beginPath();
-      ctx.moveTo(PAD_LEFT, y);
-      ctx.lineTo(W - PAD_RIGHT, y);
-      ctx.stroke();
+      ticks.forEach((t,i) => { const x=sx(i),y=sy(t.price); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+      ctx.lineTo(sx(ticks.length-1),H-PB); ctx.lineTo(sx(0),H-PB);
+      ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
     }
 
-    // ── Price scale labels ──────────────────────────────────────────
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = '11px Inter, system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    for (let i = 0; i <= gridLines; i++) {
-      const p = max - (i / gridLines) * range;
-      const y = PAD_TOP + (i / gridLines) * (H - PAD_TOP - PAD_BOTTOM);
-      ctx.fillText(p.toFixed(2), W - PAD_RIGHT + 8, y + 4);
-    }
-
-    // ── Time axis ───────────────────────────────────────────────────
-    ctx.fillStyle = '#9ca3af';
-    ctx.textAlign = 'center';
-    const timeLabels = 6;
-    for (let i = 0; i <= timeLabels; i++) {
-      const idx = Math.round((i / timeLabels) * (ticks.length - 1));
-      const x = scaleX(idx);
-      const date = new Date(ticks[idx].time * 1000);
-      const label = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      ctx.fillText(label, x, H - 6);
-    }
-
-    const isUp = ticks[ticks.length - 1].price >= ticks[0].price;
-    const lineColor = isUp ? '#1d4ed8' : '#ef4444';
-
-    if (chartType === 'area' || chartType === 'line') {
-      // Fill gradient
-      if (chartType === 'area') {
-        const grad = ctx.createLinearGradient(0, PAD_TOP, 0, H - PAD_BOTTOM);
-        grad.addColorStop(0, isUp ? 'rgba(59,130,246,0.18)' : 'rgba(239,68,68,0.18)');
-        grad.addColorStop(1, 'rgba(255,255,255,0)');
-
-        ctx.beginPath();
-        ticks.forEach((tick, i) => {
-          const x = scaleX(i);
-          const y = scaleY(tick.price);
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
-        ctx.lineTo(scaleX(ticks.length - 1), H - PAD_BOTTOM);
-        ctx.lineTo(scaleX(0), H - PAD_BOTTOM);
-        ctx.closePath();
-        ctx.fillStyle = grad;
-        ctx.fill();
-      }
-
-      // Main line
+    if (chartType !== 'candle') {
       ctx.beginPath();
-      ticks.forEach((tick, i) => {
-        const x = scaleX(i);
-        const y = scaleY(tick.price);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.strokeStyle = lineColor;
-      ctx.lineWidth = 1.5;
-      ctx.lineJoin = 'round';
-      ctx.stroke();
-    }
-
-    if (chartType === 'candle') {
-      // Group ticks into OHLC bars
-      const BAR_COUNT = Math.min(80, Math.floor(ticks.length / 2));
-      const barSize = Math.max(1, Math.floor(ticks.length / BAR_COUNT));
-      const barW = Math.max(3, ((W - PAD_LEFT - PAD_RIGHT) / BAR_COUNT) * 0.7);
-
-      for (let b = 0; b < BAR_COUNT; b++) {
-        const start = b * barSize;
-        const end = Math.min(start + barSize, ticks.length);
-        const slice = ticks.slice(start, end);
-        if (!slice.length) continue;
-        const open = slice[0].price;
-        const close = slice[slice.length - 1].price;
-        const high = Math.max(...slice.map((t) => t.price));
-        const low = Math.min(...slice.map((t) => t.price));
-        const midX = scaleX(Math.floor((start + end) / 2));
-        const bull = close >= open;
-        const color = bull ? '#10b981' : '#ef4444';
-
-        // Wick
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(midX, scaleY(high));
-        ctx.lineTo(midX, scaleY(low));
-        ctx.stroke();
-
-        // Body
-        ctx.fillStyle = color;
-        const bodyTop = scaleY(Math.max(open, close));
-        const bodyH = Math.max(1, Math.abs(scaleY(open) - scaleY(close)));
-        ctx.fillRect(midX - barW / 2, bodyTop, barW, bodyH);
+      ticks.forEach((t,i) => { const x=sx(i),y=sy(t.price); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+      ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.lineJoin='round'; ctx.stroke();
+    } else {
+      const BC = Math.min(80, Math.floor(ticks.length/2));
+      const bs = Math.max(1, Math.floor(ticks.length/BC));
+      const bw = Math.max(3,((W-PL-PR)/BC)*0.7);
+      for (let b=0; b<BC; b++) {
+        const sl = ticks.slice(b*bs, Math.min((b+1)*bs, ticks.length));
+        if (!sl.length) continue;
+        const o=sl[0].price, c=sl[sl.length-1].price;
+        const hi=Math.max(...sl.map(t=>t.price)), lo=Math.min(...sl.map(t=>t.price));
+        const mx=sx(Math.floor((b*bs+(b+1)*bs)/2)), bull=c>=o, clr=bull?'#10b981':'#ef4444';
+        ctx.strokeStyle=clr; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(mx,sy(hi)); ctx.lineTo(mx,sy(lo)); ctx.stroke();
+        ctx.fillStyle=clr;
+        const bt=sy(Math.max(o,c)), bh=Math.max(1,Math.abs(sy(o)-sy(c)));
+        ctx.fillRect(mx-bw/2,bt,bw,bh);
       }
     }
 
-    // ── Current price line + label ──────────────────────────────────
-    const lastPrice = ticks[ticks.length - 1].price;
-    const lastY = scaleY(lastPrice);
-    const lastX = scaleX(ticks.length - 1);
-
-    // Dashed price line
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = '#374151';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(W - PAD_RIGHT, lastY);
-    ctx.stroke();
+    // Current price marker
+    const lp = ticks[ticks.length-1].price;
+    const lx = sx(ticks.length-1), ly = sy(lp);
+    ctx.setLineDash([4,4]); ctx.strokeStyle='#374151'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(W-PR,ly); ctx.stroke();
     ctx.setLineDash([]);
-
-    // Dot
-    ctx.beginPath();
-    ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#1f2937';
-    ctx.fill();
-
-    // Price badge
-    const badgeH = 20;
-    const badgeX = W - PAD_RIGHT + 2;
-    ctx.fillStyle = '#1f2937';
-    ctx.beginPath();
-    ctx.roundRect(badgeX, lastY - badgeH / 2, PAD_RIGHT - 4, badgeH, 3);
-    ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 11px Inter, system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(lastPrice.toFixed(2), badgeX + (PAD_RIGHT - 4) / 2, lastY + 4);
+    ctx.beginPath(); ctx.arc(lx,ly,4,0,Math.PI*2);
+    ctx.fillStyle='#1f2937'; ctx.fill();
+    const bx=W-PR+2, bw2=PR-4, bh2=20;
+    ctx.fillStyle='#1f2937';
+    ctx.beginPath(); ctx.roundRect(bx,ly-bh2/2,bw2,bh2,3); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 10px system-ui'; ctx.textAlign='center';
+    ctx.fillText(lp.toFixed(2), bx+bw2/2, ly+4);
   }, [ticks, chartType]);
 
-  useEffect(() => {
-    draw();
-  }, [draw]);
-
+  useEffect(() => { draw(); }, [draw]);
   useEffect(() => {
     const ro = new ResizeObserver(() => draw());
     if (containerRef.current) ro.observe(containerRef.current);
@@ -258,14 +155,24 @@ function ChartCanvas({
   }, [draw]);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full">
+    <div ref={containerRef} className="relative w-full h-full bg-white">
       {ticks.length < 2 ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <div className="relative w-10 h-10">
-            <div className="absolute inset-0 rounded-full border-2 border-gray-200" />
-            <div className="absolute inset-0 rounded-full border-2 border-gray-900 border-t-transparent animate-spin" />
-          </div>
-          <p className="text-xs text-gray-400">Retrieving Chart Data…</p>
+          {status === 'error' ? (
+            <>
+              <AlertCircle size={32} className="text-red-400" />
+              <p className="text-sm font-semibold text-red-500">Chart connection failed</p>
+              <p className="text-xs text-gray-400 max-w-xs text-center">{errorMsg || 'Unable to connect to Deriv WebSocket. Check your internet.'}</p>
+            </>
+          ) : (
+            <>
+              <div className="relative w-10 h-10">
+                <div className="absolute inset-0 rounded-full border-2 border-gray-200" />
+                <div className="absolute inset-0 rounded-full border-2 border-gray-800 border-t-transparent animate-spin" />
+              </div>
+              <p className="text-xs text-gray-400">Retrieving Chart Data…</p>
+            </>
+          )}
         </div>
       ) : (
         <canvas ref={canvasRef} className="block w-full h-full" />
@@ -274,298 +181,231 @@ function ChartCanvas({
   );
 }
 
-// ── Main Charts Section ───────────────────────────────────────────────────────
 export default function ChartsSection() {
-  const [selectedSymbol, setSelectedSymbol] = useState<MarketItem>(MARKETS[1]); // 1HZ25V default
+  const [selected, setSelected] = useState<MarketItem>(MARKETS[1]);
   const [ticks, setTicks] = useState<Tick[]>([]);
-  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
-  const [change, setChange] = useState<number>(0);
-  const [status, setStatus] = useState<'connecting' | 'live' | 'error'>('connecting');
+  const [price, setPrice] = useState<number | null>(null);
+  const [change, setChange] = useState(0);
+  const [status, setStatus] = useState<'connecting'|'live'|'error'>('connecting');
+  const [errorMsg, setErrorMsg] = useState('');
   const [chartType, setChartType] = useState<ChartType>('area');
   const [search, setSearch] = useState('');
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [marketPrices, setMarketPrices] = useState<Record<string, number>>({});
-  const [showMarketDropdown, setShowMarketDropdown] = useState(false);
-
+  const [favs, setFavs] = useState<Set<string>>(new Set());
+  const [panelOpen, setPanelOpen] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
-  // ── Connect WebSocket for selected symbol ───────────────────────────────────
   useEffect(() => {
-    setTicks([]);
-    setCurrentPrice(null);
-    setChange(0);
-    setStatus('connecting');
+    setTicks([]); setPrice(null); setChange(0);
+    setStatus('connecting'); setErrorMsg('');
 
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
 
-    const ws = new WebSocket(WS_ENDPOINT);
+    const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setStatus('live');
-      ws.send(JSON.stringify({ ticks: selectedSymbol.symbol, subscribe: 1 }));
+      ws.send(JSON.stringify({ ticks: selected.symbol, subscribe: 1 }));
     };
-
-    ws.onerror = () => setStatus('error');
-    ws.onclose = () => { if (status !== 'error') setStatus('error'); };
-
-    ws.onmessage = (event) => {
+    ws.onerror = () => { setStatus('error'); setErrorMsg('WebSocket connection failed.'); };
+    ws.onclose = (e) => {
+      if (e.code !== 1000) { setStatus('error'); setErrorMsg(`Closed (code ${e.code})`); }
+    };
+    ws.onmessage = (ev) => {
       try {
-        const msg = JSON.parse(event.data as string);
-        if (msg.error) { setStatus('error'); return; }
+        const msg = JSON.parse(ev.data as string);
+        if (msg.error) {
+          console.error('Deriv WS error:', msg.error);
+          setStatus('error');
+          setErrorMsg(msg.error.message || 'Symbol not available.');
+          return;
+        }
         if (msg.tick) {
-          const price = msg.tick.quote as number;
-          const time = msg.tick.epoch as number;
-          setCurrentPrice(price);
-          setMarketPrices((prev) => ({ ...prev, [msg.tick.symbol]: price }));
-          setTicks((prev) => {
-            const next = [...prev, { time, price }].slice(-MAX_TICKS);
-            if (next.length >= 2) {
-              setChange(((next[next.length - 1].price - next[0].price) / next[0].price) * 100);
-            }
+          const p = msg.tick.quote as number;
+          const t = msg.tick.epoch as number;
+          setPrice(p);
+          setTicks(prev => {
+            const next = [...prev, { time: t, price: p }].slice(-MAX_TICKS);
+            if (next.length >= 2) setChange(((next[next.length-1].price - next[0].price) / next[0].price)*100);
             return next;
           });
         }
-      } catch {
-        // ignore malformed frames
-      }
+      } catch { /* ignore */ }
     };
-
-    return () => {
-      ws.close();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSymbol.symbol]);
+    return () => { ws.close(); };
+  }, [selected.symbol]);
 
   const isUp = change >= 0;
-  const decimals = selectedSymbol.symbol.startsWith('frx') ? 5 : 2;
-
-  // ── Filtered market list ────────────────────────────────────────────────────
-  const filtered = MARKETS.filter(
-    (m) =>
-      m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.symbol.toLowerCase().includes(search.toLowerCase())
+  const filtered = MARKETS.filter(m =>
+    m.name.toLowerCase().includes(search.toLowerCase()) ||
+    m.symbol.toLowerCase().includes(search.toLowerCase())
   );
-
-  // Group by subcategory
   const grouped: Record<string, MarketItem[]> = {};
-  filtered.forEach((m) => {
-    if (!grouped[m.subcategory]) grouped[m.subcategory] = [];
-    grouped[m.subcategory].push(m);
-  });
+  filtered.forEach(m => { if (!grouped[m.subcategory]) grouped[m.subcategory] = []; grouped[m.subcategory].push(m); });
 
-  const toggleFav = (symbol: string) => {
-    setFavorites((prev) => {
-      const next = new Set(prev);
-      if (next.has(symbol)) next.delete(symbol);
-      else next.add(symbol);
-      return next;
-    });
-  };
+  const chartTools = [
+    { type: 'line' as ChartType, Icon: TrendingUp, label: 'Line' },
+    { type: 'area' as ChartType, Icon: Activity, label: 'Area' },
+    { type: 'candle' as ChartType, Icon: BarChart2, label: 'Candle' },
+  ];
 
   return (
-    <div className="flex flex-col h-full" style={{ height: 'calc(100vh - 7.5rem)' }}>
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
 
       {/* ── Instrument Header ── */}
-      <div className="flex items-center gap-4 px-4 py-2.5 bg-white border-b border-gray-200 shrink-0">
+      <div className="flex items-center gap-3 px-3 py-2 bg-white border-b border-gray-200 shrink-0 flex-wrap">
         <button
-          id="chart-market-selector"
-          onClick={() => setShowMarketDropdown((v) => !v)}
-          className="flex items-center gap-3 bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-3 py-2 shadow-sm transition-colors"
+          onClick={() => setPanelOpen(v => !v)}
+          className="flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-3 py-2 shadow-sm transition-colors"
         >
           <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-            <SparkIcon up={isUp} />
+            <SparkIcon />
           </div>
-          <div className="text-left">
-            <p className="text-sm font-bold text-gray-900 leading-tight">{selectedSymbol.name}</p>
-            <p className="text-xs text-gray-400 leading-tight">{selectedSymbol.symbol}</p>
+          <div className="text-left min-w-0">
+            <p className="text-sm font-bold text-gray-900 truncate max-w-[140px] sm:max-w-none">{selected.name}</p>
+            <p className="text-xs text-gray-400">{selected.symbol}</p>
           </div>
-          <ChevronDown size={14} className="text-gray-400 ml-1" />
+          <ChevronDown size={14} className={`text-gray-400 transition-transform ${panelOpen ? 'rotate-180' : ''}`} />
         </button>
 
-        {/* Price display */}
-        <div className="flex items-center gap-3">
-          <p className="text-2xl font-bold text-gray-900 font-mono tracking-tight">
-            {currentPrice !== null ? currentPrice.toFixed(decimals) : '—'}
+        <div className="flex items-center gap-2">
+          <p className="text-xl font-bold text-gray-900 font-mono">
+            {price !== null ? price.toFixed(2) : '—'}
           </p>
-          <div className="flex flex-col">
-            <span className={`text-sm font-bold ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>
+          <div>
+            <span className={`text-sm font-bold block ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>
               {isUp ? '▲' : '▼'} {Math.abs(change).toFixed(3)}%
             </span>
             <div className="flex items-center gap-1">
               <span className={`w-1.5 h-1.5 rounded-full ${
-                status === 'live' ? 'bg-emerald-500 animate-pulse' :
-                status === 'error' ? 'bg-red-500' : 'bg-yellow-400 animate-pulse'
+                status==='live' ? 'bg-emerald-500 animate-pulse' :
+                status==='error' ? 'bg-red-500' : 'bg-yellow-400 animate-pulse'
               }`} />
               <span className="text-xs text-gray-400">
-                {status === 'live' ? 'Live' : status === 'error' ? 'Error' : 'Connecting…'}
+                {status==='live' ? 'Live' : status==='error' ? 'Error' : 'Connecting…'}
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Body: market sidebar + chart ── */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* ── Body ── */}
+      <div className="flex flex-1 overflow-hidden relative">
 
-        {/* Market dropdown panel (mimics Deriv's left panel) */}
-        {showMarketDropdown && (
-          <div
-            id="chart-market-panel"
-            className="w-72 bg-white border-r border-gray-200 flex flex-col shrink-0 overflow-hidden"
-          >
-            {/* Search */}
-            <div className="p-3 border-b border-gray-100">
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search…"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
-                />
+        {/* Market Panel — overlay on mobile, sidebar on desktop */}
+        {panelOpen && (
+          <>
+            {/* Mobile backdrop */}
+            <div className="md:hidden fixed inset-0 z-20 bg-black/40" onClick={() => setPanelOpen(false)} />
+
+            <div className="absolute md:relative z-30 md:z-auto top-0 left-0 h-full
+              w-[85vw] max-w-xs md:w-72
+              bg-white border-r border-gray-200 flex flex-col shadow-xl md:shadow-none">
+
+              {/* Panel header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <span className="text-sm font-bold text-gray-800">Markets</span>
+                <button onClick={() => setPanelOpen(false)} className="text-gray-400 hover:text-gray-700">
+                  <X size={18} />
+                </button>
               </div>
-            </div>
 
-            {/* Category tabs */}
-            <div className="flex border-b border-gray-100 px-3 pt-2 gap-4">
-              <div className="flex flex-col items-start gap-0.5 cursor-pointer pb-2 border-b-2 border-red-500">
-                <span className="text-xs font-bold text-gray-700">Markets</span>
-              </div>
-            </div>
-
-            {/* Favorites row */}
-            {favorites.size > 0 && (
-              <div className="px-3 pt-3 pb-1">
-                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Star size={11} className="fill-yellow-400 text-yellow-400" /> Favorites
-                </p>
-                {MARKETS.filter((m) => favorites.has(m.symbol)).map((m) => (
-                  <MarketRow
-                    key={m.symbol}
-                    market={m}
-                    selected={selectedSymbol.symbol === m.symbol}
-                    isFav={true}
-                    price={marketPrices[m.symbol]}
-                    onSelect={() => { setSelectedSymbol(m); setShowMarketDropdown(false); }}
-                    onToggleFav={() => toggleFav(m.symbol)}
+              {/* Search */}
+              <div className="px-3 py-2 border-b border-gray-100">
+                <div className="relative">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search markets…"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-blue-400"
                   />
-                ))}
+                </div>
               </div>
-            )}
 
-            {/* Grouped list */}
-            <div className="flex-1 overflow-y-auto px-2 py-2">
-              {/* Category header: Derived */}
-              <div className="px-2 py-1.5">
-                <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+              {/* Favorites */}
+              {favs.size > 0 && (
+                <div className="px-3 pt-2">
+                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Star size={10} className="fill-yellow-400 text-yellow-400" /> Favorites
+                  </p>
+                  {MARKETS.filter(m => favs.has(m.symbol)).map(m => (
+                    <MRow key={m.symbol} m={m} active={selected.symbol===m.symbol} fav={true}
+                      onSelect={() => { setSelected(m); setPanelOpen(false); }}
+                      onFav={() => setFavs(p => { const n=new Set(p); n.has(m.symbol)?n.delete(m.symbol):n.add(m.symbol); return n; })} />
+                  ))}
+                </div>
+              )}
+
+              {/* Market list */}
+              <div className="flex-1 overflow-y-auto px-2 py-2">
+                <p className="px-2 py-1 text-xs font-bold text-gray-900 flex items-center gap-1.5">
                   <span className="w-4 h-4 rounded-full bg-gray-800 text-white flex items-center justify-center text-[8px] font-black">D</span>
                   Derived
                 </p>
+                {Object.entries(grouped).map(([cat, items]) => (
+                  <div key={cat} className="mb-1">
+                    <p className="text-[10px] text-gray-400 font-bold px-2 py-1 uppercase tracking-wider">{cat}</p>
+                    {items.map(m => (
+                      <MRow key={m.symbol} m={m} active={selected.symbol===m.symbol} fav={favs.has(m.symbol)}
+                        onSelect={() => { setSelected(m); setPanelOpen(false); }}
+                        onFav={() => setFavs(p => { const n=new Set(p); n.has(m.symbol)?n.delete(m.symbol):n.add(m.symbol); return n; })} />
+                    ))}
+                  </div>
+                ))}
               </div>
-
-              {Object.entries(grouped).map(([subcat, items]) => (
-                <div key={subcat} className="mb-1">
-                  <p className="text-xs text-gray-400 font-semibold px-2 py-1 uppercase tracking-wider">{subcat}</p>
-                  {items.map((m) => (
-                    <MarketRow
-                      key={m.symbol}
-                      market={m}
-                      selected={selectedSymbol.symbol === m.symbol}
-                      isFav={favorites.has(m.symbol)}
-                      price={marketPrices[m.symbol]}
-                      onSelect={() => { setSelectedSymbol(m); setShowMarketDropdown(false); }}
-                      onToggleFav={() => toggleFav(m.symbol)}
-                    />
-                  ))}
-                </div>
-              ))}
             </div>
-          </div>
+          </>
         )}
 
-        {/* ── Chart area ── */}
-        <div className="flex-1 flex overflow-hidden bg-white relative">
-
-          {/* Chart type toolbar (left edge, vertical) */}
-          <div className="flex flex-col items-center gap-1 p-2 border-r border-gray-100 bg-white shrink-0">
-            {([
-              { type: 'line' as ChartType, Icon: TrendingUp, label: 'Line' },
-              { type: 'area' as ChartType, Icon: Activity, label: 'Area' },
-              { type: 'candle' as ChartType, Icon: BarChart2, label: 'Candle' },
-            ]).map(({ type, Icon, label }) => (
+        {/* ── Chart ── */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Chart type toolbar */}
+          <div className="flex flex-col items-center gap-1 py-2 px-1 border-r border-gray-100 bg-white shrink-0">
+            {chartTools.map(({ type, Icon, label }) => (
               <button
                 key={type}
-                id={`chart-type-${type}`}
-                onClick={() => setChartType(type)}
                 title={label}
-                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
-                  chartType === type
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'text-gray-400 hover:bg-gray-50 hover:text-gray-700'
+                onClick={() => setChartType(type)}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                  chartType===type ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:bg-gray-50'
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={16} />
               </button>
             ))}
-            <div className="w-px h-4 bg-gray-200 my-1" />
-            {/* Zoom controls */}
-            <button className="w-9 h-9 rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-700 flex items-center justify-center text-lg font-light">+</button>
-            <button className="w-9 h-9 rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-700 flex items-center justify-center text-lg font-light">−</button>
+            <div className="w-px h-3 bg-gray-200 my-0.5" />
+            <button className="w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-50 flex items-center justify-center text-base">+</button>
+            <button className="w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-50 flex items-center justify-center text-base">−</button>
           </div>
 
-          {/* Canvas chart */}
-          <div className="flex-1 overflow-hidden">
-            <ChartCanvas ticks={ticks} chartType={chartType} />
+          {/* Canvas */}
+          <div className="flex-1 min-w-0 h-full">
+            <ChartCanvas ticks={ticks} chartType={chartType} status={status} errorMsg={errorMsg} />
           </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes chart-spin { to { transform: rotate(360deg); } }
-      `}</style>
     </div>
   );
 }
 
-// ── Market Row Component ──────────────────────────────────────────────────────
-function MarketRow({
-  market, selected, isFav, price, onSelect, onToggleFav,
-}: {
-  market: MarketItem;
-  selected: boolean;
-  isFav: boolean;
-  price?: number;
-  onSelect: () => void;
-  onToggleFav: () => void;
+function MRow({ m, active, fav, onSelect, onFav }: {
+  m: MarketItem; active: boolean; fav: boolean; onSelect: () => void; onFav: () => void;
 }) {
   return (
     <div
-      className={`flex items-center gap-2.5 px-2 py-2 rounded-xl cursor-pointer transition-colors group ${
-        selected ? 'bg-blue-50' : 'hover:bg-gray-50'
-      }`}
       onClick={onSelect}
+      className={`flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors group ${
+        active ? 'bg-blue-50' : 'hover:bg-gray-50'
+      }`}
     >
-      <div className="w-8 h-5 shrink-0">
-        <SparkIcon up={true} />
-      </div>
-      <span className={`flex-1 text-sm font-medium truncate ${selected ? 'text-gray-900 font-semibold' : 'text-gray-700'}`}>
-        {market.name}
-      </span>
-      {price !== undefined && (
-        <span className="text-xs text-gray-400 font-mono shrink-0">{price.toFixed(2)}</span>
-      )}
+      <div className="w-7 h-4 shrink-0"><SparkIcon /></div>
+      <span className={`flex-1 text-xs truncate ${active ? 'font-bold text-gray-900' : 'text-gray-700'}`}>{m.name}</span>
       <button
-        onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
+        onClick={e => { e.stopPropagation(); onFav(); }}
         className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
       >
-        <Star
-          size={13}
-          className={isFav ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 hover:text-yellow-400'}
-        />
+        <Star size={12} className={fav ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} />
       </button>
     </div>
   );
