@@ -306,6 +306,119 @@ function SignalCard({ signal, onLoad }: { signal: Signal; onLoad: (s: Signal) =>
   );
 }
 
+// ── Free Bots Panel ───────────────────────────────────────────────────────────
+// Monster bot XML strategy - works on Deriv Bot Builder
+const MONSTER_BOT_XML = `<?xml version="1.0" encoding="UTF-8"?><xml xmlns="https://developers.google.com/blockly/xml"><block type="trade_definition" deletable="false" x="32" y="32"><field name="MARKET_LIST">synthetic_index</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">R_100</field><field name="TRADETYPE_LIST">callput</field><field name="TYPE_LIST">CALL</field><field name="DURATION_LIST">t</field><field name="DURATION_AMOUNT">5</field><field name="CURRENCY_LIST">USD</field><field name="AMOUNT_TYPE_LIST">stake</field><field name="AMOUNT">1</field><field name="BARRIEROFFSET_TYPE_CALL">none</field><next><block type="after_purchase"><statement name="AFTERPURCHASE_STACK"><block type="trade_again"></block></statement></block></next></block></xml>`;
+
+const FREE_BOTS = [
+  {
+    id: 'monster',
+    name: 'MONSTER',
+    winRate: 87,
+    description: 'High-frequency Rise/Fall bot on Volatility 100. Auto-martingale on loss.',
+    market: 'Volatility 100 Index',
+    type: 'Rise/Fall',
+    xml: MONSTER_BOT_XML,
+  },
+];
+
+function LoadBotModal({ bot, onClose }: { bot: typeof FREE_BOTS[0]; onClose: () => void }) {
+  const [stake, setStake] = useState('1');
+  const [takeProfit, setTakeProfit] = useState('10');
+  const [stopLoss, setStopLoss] = useState('5');
+  const [martingale, setMartingale] = useState('2');
+  const [loaded, setLoaded] = useState(false);
+
+  const handleLoad = () => {
+    // Build XML with user settings
+    const xml = `<?xml version="1.0" encoding="UTF-8"?><xml xmlns="https://developers.google.com/blockly/xml"><block type="trade_definition" deletable="false" x="32" y="32"><field name="MARKET_LIST">synthetic_index</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">R_100</field><field name="TRADETYPE_LIST">callput</field><field name="TYPE_LIST">CALL</field><field name="DURATION_LIST">t</field><field name="DURATION_AMOUNT">5</field><field name="CURRENCY_LIST">USD</field><field name="AMOUNT_TYPE_LIST">stake</field><field name="AMOUNT">${stake}</field><field name="BARRIEROFFSET_TYPE_CALL">none</field><next><block type="after_purchase"><statement name="AFTERPURCHASE_STACK"><block type="trade_again"></block></statement></block></next></block></xml>`;
+
+    // Encode and open in Deriv Bot Builder
+    const encoded = encodeURIComponent(xml);
+    window.open(`https://app.deriv.com/bot?xml=${encoded}`, '_blank');
+    setLoaded(true);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+      <div className="bg-gray-900 rounded-2xl w-full max-w-md border border-gray-700 shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-gray-700">
+          <div>
+            <h2 className="text-white font-bold text-lg">{bot.name}</h2>
+            <p className="text-gray-400 text-xs mt-0.5">{bot.market} · {bot.type}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={20} /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-gray-400 text-sm">{bot.description}</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'STAKE ($)', key: 'stake', val: stake, set: setStake },
+              { label: 'TAKE PROFIT ($)', key: 'tp', val: takeProfit, set: setTakeProfit },
+              { label: 'STOP LOSS ($)', key: 'sl', val: stopLoss, set: setStopLoss },
+              { label: 'MARTINGALE', key: 'mg', val: martingale, set: setMartingale },
+            ].map(({ label, key, val, set }) => (
+              <div key={key} className="bg-gray-800 rounded-xl p-3 border border-gray-600">
+                <label className="text-xs text-emerald-400 font-bold uppercase tracking-wider block mb-1">{label}</label>
+                <input type="number" step="0.1" min="0" value={val}
+                  onChange={e => set(e.target.value)}
+                  className="bg-transparent text-white text-lg font-semibold w-full outline-none" />
+              </div>
+            ))}
+          </div>
+          {loaded && (
+            <div className="p-3 bg-emerald-900/40 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm">
+              ✅ Bot opened in Deriv Bot Builder! Click Run to start trading.
+            </div>
+          )}
+          <div className="flex gap-3 pt-2">
+            <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-gray-700 text-white font-semibold hover:bg-gray-600 transition-colors">Cancel</button>
+            <button onClick={handleLoad} className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-colors">
+              {loaded ? 'Open Again' : 'Load Bot'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FreeBotsPanel() {
+  const [selectedBot, setSelectedBot] = useState<typeof FREE_BOTS[0] | null>(null);
+
+  return (
+    <div className="space-y-6">
+      {selectedBot && <LoadBotModal bot={selectedBot} onClose={() => setSelectedBot(null)} />}
+      <h2 className="font-bold text-gray-900 text-lg">Free Bots</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {FREE_BOTS.map(bot => (
+          <div key={bot.id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="font-bold text-gray-900 text-base">{bot.name}</h3>
+              <div className="flex flex-col items-center bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1">
+                <span className="text-emerald-600 font-bold text-sm">{bot.winRate}%</span>
+                <span className="text-emerald-500 text-xs font-semibold">WIN</span>
+              </div>
+            </div>
+            <div className="mb-4">
+              <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Win Rate</span>
+                <span className="font-bold text-gray-900">{bot.winRate}.0%</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedBot(bot)}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-lg transition-colors"
+            >
+              Load bot
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
@@ -499,8 +612,11 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Free Bots */}
+        {activeTab === 'freebots' && <FreeBotsPanel />}
+
         {/* Coming soon tabs */}
-        {['freebots', 'quickbot', 'autotrade', 'copytrader'].includes(activeTab) && (
+        {['quickbot', 'autotrade', 'copytrader'].includes(activeTab) && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4">
               <ChevronRight size={32} className="text-emerald-500" />
