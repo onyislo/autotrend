@@ -4,6 +4,7 @@ import {
   ChevronRight, Activity, Menu, X, LayoutDashboard,
   Copy, ChevronLeft, Repeat
 } from 'lucide-react';
+import DerivLiveChart from './DerivLiveChart';
 
 function Logo({ size = 28 }: { size?: number }) {
   return (
@@ -195,15 +196,15 @@ const AUTOTRENDX_BOT_XML = `<?xml version="1.0" encoding="UTF-8"?><xml xmlns="ht
 
 const FREE_BOTS = [{ id: 'autotrendx', name: 'AUTOTRENDX BOT', winRate: 87, description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses.", market: 'Volatility 50 Index', type: "D'Alembert / Digits", xml: AUTOTRENDX_BOT_XML }];
 
-function LoadBotModal({ bot, onClose }: { bot: typeof FREE_BOTS[0]; onClose: () => void }) {
+function LoadBotModal({ bot, onClose, onGoToBotBuilder }: { bot: typeof FREE_BOTS[0]; onClose: () => void; onGoToBotBuilder: () => void }) {
   const [stake, setStake] = useState('1');
   const [takeProfit, setTakeProfit] = useState('10');
   const [stopLoss, setStopLoss] = useState('5');
-  const [loaded, setLoaded] = useState(false);
 
   const handleLoad = () => {
-    window.open(`https://app.deriv.com/bot?xml=${encodeURIComponent(bot.xml)}`, '_blank');
-    setLoaded(true);
+    // Navigate to Bot Builder tab inside the site (no external redirect)
+    onGoToBotBuilder();
+    onClose();
   };
 
   return (
@@ -223,10 +224,12 @@ function LoadBotModal({ bot, onClose }: { bot: typeof FREE_BOTS[0]; onClose: () 
               </div>
             ))}
           </div>
-          {loaded && <div className="p-3 bg-emerald-900/40 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm">✅ Bot opened in Deriv Bot Builder! Click Run to start trading.</div>}
+          <div className="p-3 bg-blue-900/40 border border-blue-500/30 rounded-lg text-blue-300 text-sm">
+            ℹ️ This will open the Bot Builder inside Auto Trend X. Your strategy XML will be ready to use.
+          </div>
           <div className="flex gap-3 pt-2">
             <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-gray-700 text-white font-semibold">Cancel</button>
-            <button onClick={handleLoad} className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold">{loaded ? 'Open Again' : 'Load Bot'}</button>
+            <button onClick={handleLoad} className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold">Open Bot Builder</button>
           </div>
         </div>
       </div>
@@ -234,11 +237,11 @@ function LoadBotModal({ bot, onClose }: { bot: typeof FREE_BOTS[0]; onClose: () 
   );
 }
 
-function FreeBotsPanel() {
+function FreeBotsPanel({ onGoToBotBuilder }: { onGoToBotBuilder: () => void }) {
   const [selectedBot, setSelectedBot] = useState<typeof FREE_BOTS[0] | null>(null);
   return (
     <div className="space-y-6">
-      {selectedBot && <LoadBotModal bot={selectedBot} onClose={() => setSelectedBot(null)} />}
+      {selectedBot && <LoadBotModal bot={selectedBot} onClose={() => setSelectedBot(null)} onGoToBotBuilder={onGoToBotBuilder} />}
       <h2 className="font-bold text-gray-900 text-lg">Free Bots</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {FREE_BOTS.map(bot => (
@@ -463,7 +466,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {activeTab === 'freebots' && <FreeBotsPanel />}
+          {activeTab === 'freebots' && <FreeBotsPanel onGoToBotBuilder={() => setActiveTab('botbuilder')} />}
           {activeTab === 'signalai' && (
             <div className="space-y-6 max-w-7xl mx-auto">
               <div className="flex items-center justify-between">
@@ -497,9 +500,15 @@ export default function Dashboard() {
 
           {activeTab === 'charts' && (
             <div className="max-w-7xl mx-auto space-y-4">
-              <h2 className="font-bold text-gray-900 text-lg">Charts</h2>
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
-                <iframe src="https://app.deriv.com/dtrader" className="w-full h-full border-0" title="Charts" />
+              <h2 className="font-bold text-gray-900 text-lg">Live Charts</h2>
+              <p className="text-sm text-gray-500">Real-time price data streamed directly from Deriv WebSocket API.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <DerivLiveChart symbol="R_100" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Volatility 100 Index" />
+                <DerivLiveChart symbol="R_75" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Volatility 75 Index" />
+                <DerivLiveChart symbol="R_50" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Volatility 50 Index" />
+                <DerivLiveChart symbol="R_25" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Volatility 25 Index" />
+                <DerivLiveChart symbol="1HZ100V" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Volatility 100 (1s) Index" />
+                <DerivLiveChart symbol="CRASH500" wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} label="Crash 500 Index" />
               </div>
             </div>
           )}
