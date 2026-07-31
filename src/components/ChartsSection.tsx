@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Star, ChevronDown, TrendingUp, BarChart2, Activity, X, AlertCircle } from 'lucide-react';
+import { Search, Star, ChevronDown, TrendingUp, BarChart2, Activity, X, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface Tick { time: number; price: number; }
 interface MarketItem { symbol: string; name: string; subcategory: string; }
@@ -28,8 +28,24 @@ const MARKETS: MarketItem[] = [
   { symbol: 'STPIDX',    name: 'Step Index',        subcategory: 'Step Indices' },
 ];
 
-const WS_URL = 'wss://ws.derivws.com/websockets/v3?app_id=36544';
+const PRIMARY_WS = 'wss://ws.derivws.com/websockets/v3?app_id=36544';
+const FALLBACK_WS = 'wss://ws.binaryws.com/websockets/v3?app_id=1089';
 const MAX_TICKS = 200;
+
+// Log error to Vercel Serverless logger
+function logErrorToVercel(context: string, message: string, symbol: string, details?: any) {
+  fetch('/api/log-error', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      context,
+      message,
+      symbol,
+      details,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+    })
+  }).catch(() => {});
+}
 
 function SparkIcon() {
   return (
@@ -42,8 +58,8 @@ function SparkIcon() {
   );
 }
 
-function ChartCanvas({ ticks, chartType, status, errorMsg }: {
-  ticks: Tick[]; chartType: ChartType; status: string; errorMsg: string;
+function ChartCanvas({ ticks, chartType, status, errorMsg, onRetry }: {
+  ticks: Tick[]; chartType: ChartType; status: string; errorMsg: string; onRetry: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -157,20 +173,26 @@ function ChartCanvas({ ticks, chartType, status, errorMsg }: {
   return (
     <div ref={containerRef} className="relative w-full h-full bg-white">
       {ticks.length < 2 ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
           {status === 'error' ? (
-            <>
-              <AlertCircle size={32} className="text-red-400" />
-              <p className="text-sm font-semibold text-red-500">Chart connection failed</p>
-              <p className="text-xs text-gray-400 max-w-xs text-center">{errorMsg || 'Unable to connect to Deriv WebSocket. Check your internet.'}</p>
-            </>
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 max-w-sm text-center shadow-sm">
+              <AlertCircle size={36} className="text-red-500 mx-auto mb-2" />
+              <h3 className="text-base font-bold text-gray-900 mb-1">Chart Connection Error</h3>
+              <p className="text-xs text-gray-600 mb-4">{errorMsg || 'Unable to connect to real-time market data stream.'}</p>
+              <button
+                onClick={onRetry}
+                className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-colors shadow-sm"
+              >
+                <RefreshCw size={14} /> Retry Connection
+              </button>
+            </div>
           ) : (
             <>
               <div className="relative w-10 h-10">
                 <div className="absolute inset-0 rounded-full border-2 border-gray-200" />
                 <div className="absolute inset-0 rounded-full border-2 border-gray-800 border-t-transparent animate-spin" />
               </div>
-              <p className="text-xs text-gray-400">Retrieving Chart Data…</p>
+              <p className="text-xs text-gray-400 font-medium">Retrieving Chart Data…</p>
             </>
           )}
         </div>
@@ -192,32 +214,53 @@ export default function ChartsSection() {
   const [search, setSearch] = useState('');
   const [favs, setFavs] = useState<Set<string>>(new Set());
   const [panelOpen, setPanelOpen] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
 
-  useEffect(() => {
+  const connectChart = useCallback((symbolItem: MarketItem, isFallback = false) => {
     setTicks([]); setPrice(null); setChange(0);
     setStatus('connecting'); setErrorMsg('');
 
     if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
 
-    const ws = new WebSocket(WS_URL);
+    const endpoint = isFallback ? FALLBACK_WS : PRIMARY_WS;
+    const ws = new WebSocket(endpoint);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setStatus('live');
-      ws.send(JSON.stringify({ ticks: selected.symbol, subscribe: 1 }));
+      ws.send(JSON.stringify({ ticks: symbolItem.symbol, subscribe: 1 }));
     };
-    ws.onerror = () => { setStatus('error'); setErrorMsg('WebSocket connection failed.'); };
+
+    ws.onerror = (evt) => {
+      console.error('WS Error:', evt);
+      if (!isFallback) {
+        // Try fallback websocket if primary fails
+        connectChart(symbolItem, true);
+        return;
+      }
+      const msg = 'Unable to establish WebSocket stream to Deriv server.';
+      setStatus('error'); setErrorMsg(msg);
+      logErrorToVercel('WebSocket_OnError', msg, symbolItem.symbol, { isFallback, endpoint });
+    };
+
     ws.onclose = (e) => {
-      if (e.code !== 1000) { setStatus('error'); setErrorMsg(`Closed (code ${e.code})`); }
+      if (e.code !== 1000) {
+        const msg = `WebSocket closed unexpectedly (code ${e.code})`;
+        setStatus('error'); setErrorMsg(msg);
+        logErrorToVercel('WebSocket_OnClose', msg, symbolItem.symbol, { code: e.code, reason: e.reason });
+      }
     };
+
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data as string);
         if (msg.error) {
-          console.error('Deriv WS error:', msg.error);
+          console.error('Deriv WS response error:', msg.error);
+          const errText = msg.error.message || 'Symbol not available or subscription rejected.';
           setStatus('error');
-          setErrorMsg(msg.error.message || 'Symbol not available.');
+          setErrorMsg(errText);
+          logErrorToVercel('Deriv_API_Error', errText, symbolItem.symbol, msg.error);
           return;
         }
         if (msg.tick) {
@@ -230,10 +273,20 @@ export default function ChartsSection() {
             return next;
           });
         }
-      } catch { /* ignore */ }
+      } catch (err: any) {
+        logErrorToVercel('Deriv_JSON_Parse_Error', err?.message || 'Parse error', symbolItem.symbol);
+      }
     };
-    return () => { ws.close(); };
-  }, [selected.symbol]);
+  }, []);
+
+  useEffect(() => {
+    connectChart(selected);
+    return () => { if (wsRef.current) wsRef.current.close(); };
+  }, [selected, retryCount, connectChart]);
+
+  const handleRetry = () => {
+    setRetryCount(c => c + 1);
+  };
 
   const isUp = change >= 0;
   const filtered = MARKETS.filter(m =>
@@ -381,7 +434,7 @@ export default function ChartsSection() {
 
           {/* Canvas */}
           <div className="flex-1 min-w-0 h-full">
-            <ChartCanvas ticks={ticks} chartType={chartType} status={status} errorMsg={errorMsg} />
+            <ChartCanvas ticks={ticks} chartType={chartType} status={status} errorMsg={errorMsg} onRetry={handleRetry} />
           </div>
         </div>
       </div>
