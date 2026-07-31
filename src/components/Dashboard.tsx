@@ -307,18 +307,17 @@ function SignalCard({ signal, onLoad }: { signal: Signal; onLoad: (s: Signal) =>
 }
 
 // ── Free Bots Panel ───────────────────────────────────────────────────────────
-// Monster bot XML strategy - works on Deriv Bot Builder
-const MONSTER_BOT_XML = `<?xml version="1.0" encoding="UTF-8"?><xml xmlns="https://developers.google.com/blockly/xml"><block type="trade_definition" deletable="false" x="32" y="32"><field name="MARKET_LIST">synthetic_index</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">R_100</field><field name="TRADETYPE_LIST">callput</field><field name="TYPE_LIST">CALL</field><field name="DURATION_LIST">t</field><field name="DURATION_AMOUNT">5</field><field name="CURRENCY_LIST">USD</field><field name="AMOUNT_TYPE_LIST">stake</field><field name="AMOUNT">1</field><field name="BARRIEROFFSET_TYPE_CALL">none</field><next><block type="after_purchase"><statement name="AFTERPURCHASE_STACK"><block type="trade_again"></block></statement></block></next></block></xml>`;
+const AUTOTRENDX_BOT_XML = `<?xml version="1.0" encoding="UTF-8"?><xml xmlns="https://developers.google.com/blockly/xml"><variables><variable type="" id="dalembert:resultIsWin">dalembert:resultIsWin</variable><variable type="" id="dalembert:profit">dalembert:profit</variable><variable type="" id="stake">stake</variable><variable type="" id="trader">trader</variable><variable type="" id="dalembert:totalProfit">dalembert:totalProfit</variable><variable type="" id="dalembert:tradeAgain">dalembert:tradeAgain</variable><variable type="" id="win">win</variable><variable type="" id="dalembert:expectedProfit">dalembert:expectedProfit</variable><variable type="" id="dalembert:size">dalembert:size</variable><variable type="" id="dalembert:amount">dalembert:amount</variable><variable type="" id="dalembert:profitUnits">dalembert:profitUnits</variable><variable type="" id="martingale">martingale</variable><variable type="" id="text4">text4</variable><variable type="" id="take profit">take profit</variable><variable type="" id="dalembert:maximumLoss">dalembert:maximumLoss</variable><variable type="" id="text5">text5</variable><variable type="" id="text6">text6</variable><variable type="" id="text10">text10</variable><variable type="" id="text11">text11</variable><variable type="" id="text7">text7</variable><variable type="" id="text">text</variable><variable type="" id="text1">text1</variable><variable type="" id="text2">text2</variable><variable type="" id="text3">text3</variable><variable type="" id="rsi">rsi</variable><variable type="" id="text9">text9</variable><variable type="" id="text8">text8</variable></variables><block type="trade_definition" deletable="false" x="32" y="32"><mutation has_initialization="true"></mutation><field name="MARKET_LIST">synthetic_index</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">R_50</field><field name="TRADETYPE_LIST">digits</field><field name="TYPE_LIST">matchesdiffers</field><field name="DURATION_LIST">t</field><field name="DURATION_AMOUNT">60</field><field name="CURRENCY_LIST">USD</field><field name="AMOUNT_TYPE_LIST">stake</field><field name="AMOUNT">1</field><field name="BARRIEROFFSET_TYPE_CALL">none</field><statement name="INITIALIZATION"><block type="procedures_callnoreturn"><mutation name="D&apos;Alembert Trade Amount"><arg name="dalembert:expectedProfit"></arg><arg name="dalembert:maximumLoss"></arg><arg name="dalembert:amount"></arg></mutation><value name="ARG0"><block type="math_number"><field name="NUM">10</field></block></value><value name="ARG1"><block type="math_number"><field name="NUM">80</field></block></value><value name="ARG2"><block type="math_number"><field name="NUM">1</field></block></value></block></statement><statement name="PURCHASE"><block type="purchase"><field name="PURCHASE_LIST">DIGITDIFF</field></block></statement><statement name="AFTER_PURCHASE"><block type="procedures_callnoreturn"><mutation name="D&apos;Alembert Trade Again After Purchase"><arg name="dalembert:profit"></arg><arg name="dalembert:tradeAgain"></arg></mutation><value name="ARG0"><block type="read_price"><field name="READ_PRICE_LIST">profit</field></block></value><value name="ARG1"><block type="logic_boolean"><field name="BOOL">FALSE</field></block></value><next><block type="procedures_callnoreturn"><mutation name="D&apos;Alembert Core Functionality"><arg name="dalembert:resultIsWin"></arg></mutation><value name="ARG0"><block type="check_result"><field name="CHECK_RESULT_LIST">win</field></block></value><next><block type="controls_whileUntil"><field name="MODE">UNTIL</field><value name="BOOL"><block type="logic_compare"><field name="OP">NEQ</field><value name="A"><block type="variables_get"><field name="VAR" id="dalembert:tradeAgain">dalembert:tradeAgain</field></block></value><value name="B"><block type="logic_boolean"><field name="BOOL">FALSE</field></block></value></block></value><statement name="DO"><block type="purchase"><field name="PURCHASE_LIST">DIGITDIFF</field></block></statement></block></next></block></next></block></statement></block></xml>`;
 
 const FREE_BOTS = [
   {
-    id: 'monster',
-    name: 'MONSTER',
+    id: 'autotrendx',
+    name: 'AUTOTRENDX BOT',
     winRate: 87,
-    description: 'High-frequency Rise/Fall bot on Volatility 100. Auto-martingale on loss.',
-    market: 'Volatility 100 Index',
-    type: 'Rise/Fall',
-    xml: MONSTER_BOT_XML,
+    description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses with take profit and stop loss protection.",
+    market: 'Volatility 50 Index',
+    type: "D'Alembert / Digits",
+    xml: AUTOTRENDX_BOT_XML,
   },
 ];
 
@@ -330,11 +329,8 @@ function LoadBotModal({ bot, onClose }: { bot: typeof FREE_BOTS[0]; onClose: () 
   const [loaded, setLoaded] = useState(false);
 
   const handleLoad = () => {
-    // Build XML with user settings
-    const xml = `<?xml version="1.0" encoding="UTF-8"?><xml xmlns="https://developers.google.com/blockly/xml"><block type="trade_definition" deletable="false" x="32" y="32"><field name="MARKET_LIST">synthetic_index</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">R_100</field><field name="TRADETYPE_LIST">callput</field><field name="TYPE_LIST">CALL</field><field name="DURATION_LIST">t</field><field name="DURATION_AMOUNT">5</field><field name="CURRENCY_LIST">USD</field><field name="AMOUNT_TYPE_LIST">stake</field><field name="AMOUNT">${stake}</field><field name="BARRIEROFFSET_TYPE_CALL">none</field><next><block type="after_purchase"><statement name="AFTERPURCHASE_STACK"><block type="trade_again"></block></statement></block></next></block></xml>`;
-
-    // Encode and open in Deriv Bot Builder
-    const encoded = encodeURIComponent(xml);
+    // Use the actual bot XML strategy
+    const encoded = encodeURIComponent(bot.xml);
     window.open(`https://app.deriv.com/bot?xml=${encoded}`, '_blank');
     setLoaded(true);
   };
