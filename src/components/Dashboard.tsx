@@ -5,6 +5,7 @@ import {
   Copy, ChevronLeft, Repeat
 } from 'lucide-react';
 import DerivLiveChart from './DerivLiveChart';
+import BotBuilder from './BotBuilder';
 
 function Logo({ size = 28 }: { size?: number }) {
   return (
@@ -496,12 +497,7 @@ export default function Dashboard() {
           )}
 
           {activeTab === 'botbuilder' && (
-            <div className="max-w-7xl mx-auto space-y-4">
-              <h2 className="font-bold text-gray-900 text-lg">Bot Builder</h2>
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
-                <iframe src="https://app.deriv.com/bot" className="w-full h-full border-0" title="Bot Builder" allow="clipboard-write" />
-              </div>
-            </div>
+            <BotBuilder wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} />
           )}
 
           {activeTab === 'charts' && (
