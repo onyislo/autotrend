@@ -500,7 +500,14 @@ export default function Dashboard() {
           )}
 
           {activeTab === 'botbuilder' && (
-            <BotBuilder wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} />
+            session ? (
+              <BotBuilder wsToken={session.wsToken} wsUrl={session.wsUrl} />
+            ) : (
+              <div className="flex flex-col items-center justify-center w-full h-[calc(100vh-3.5rem)] bg-white gap-3">
+                <div className="w-10 h-10 border-4 border-gray-100 border-t-emerald-500 rounded-full animate-spin" />
+                <p className="text-xs font-semibold text-gray-400 font-sans">Connecting to Deriv...</p>
+              </div>
+            )
           )}
 
           {activeTab === 'charts' && <ChartsSection />}

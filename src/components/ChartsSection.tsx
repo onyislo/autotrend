@@ -111,11 +111,11 @@ function ChartCanvas({ ticks, chartType, status, errorMsg, onRetry }: {
     });
 
     const isUp = ticks[ticks.length-1].price >= ticks[0].price;
-    const col = isUp ? '#1d4ed8' : '#ef4444';
+    const col = isUp ? '#00a500' : '#ff4449';
 
     if (chartType === 'area') {
       const grad = ctx.createLinearGradient(0,PT,0,H-PB);
-      grad.addColorStop(0, isUp ? 'rgba(59,130,246,0.2)' : 'rgba(239,68,68,0.2)');
+      grad.addColorStop(0, isUp ? 'rgba(0,165,0,0.15)' : 'rgba(255,68,73,0.15)');
       grad.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.beginPath();
       ticks.forEach((t,i) => { const x=sx(i),y=sy(t.price); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
@@ -136,7 +136,7 @@ function ChartCanvas({ ticks, chartType, status, errorMsg, onRetry }: {
         if (!sl.length) continue;
         const o=sl[0].price, c=sl[sl.length-1].price;
         const hi=Math.max(...sl.map(t=>t.price)), lo=Math.min(...sl.map(t=>t.price));
-        const mx=sx(Math.floor((b*bs+(b+1)*bs)/2)), bull=c>=o, clr=bull?'#10b981':'#ef4444';
+        const mx=sx(Math.floor((b*bs+(b+1)*bs)/2)), bull=c>=o, clr=bull?'#00a500':'#ff4449';
         ctx.strokeStyle=clr; ctx.lineWidth=1;
         ctx.beginPath(); ctx.moveTo(mx,sy(hi)); ctx.lineTo(mx,sy(lo)); ctx.stroke();
         ctx.fillStyle=clr;
@@ -148,13 +148,13 @@ function ChartCanvas({ ticks, chartType, status, errorMsg, onRetry }: {
     // Current price marker
     const lp = ticks[ticks.length-1].price;
     const lx = sx(ticks.length-1), ly = sy(lp);
-    ctx.setLineDash([4,4]); ctx.strokeStyle='#374151'; ctx.lineWidth=1;
+    ctx.setLineDash([4,4]); ctx.strokeStyle=col; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(W-PR,ly); ctx.stroke();
     ctx.setLineDash([]);
     ctx.beginPath(); ctx.arc(lx,ly,4,0,Math.PI*2);
-    ctx.fillStyle='#1f2937'; ctx.fill();
+    ctx.fillStyle=col; ctx.fill();
     const bx=W-PR+2, bw2=PR-4, bh2=20;
-    ctx.fillStyle='#1f2937';
+    ctx.fillStyle=col;
     ctx.beginPath(); ctx.roundRect(bx,ly-bh2/2,bw2,bh2,3); ctx.fill();
     ctx.fillStyle='#fff'; ctx.font='bold 10px system-ui'; ctx.textAlign='center';
     ctx.fillText(lp.toFixed(2), bx+bw2/2, ly+4);
@@ -300,7 +300,7 @@ export default function ChartsSection() {
   ];
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
+    <div className="flex flex-col bg-white w-full h-full" style={{ height: 'calc(100vh - 7rem)' }}>
 
       {/* ── Instrument Header ── */}
       <div className="flex items-center gap-3 px-3 py-2 bg-white border-b border-gray-200 shrink-0 flex-wrap">
@@ -340,7 +340,7 @@ export default function ChartsSection() {
       </div>
 
       {/* ── Body ── */}
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative bg-white">
 
         {/* Market Panel — overlay on mobile, sidebar on desktop */}
         {panelOpen && (
