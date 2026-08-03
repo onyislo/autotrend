@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Plus, ShieldAlert, BarChart3, TrendingUp, Cpu, History, Trash2 } from 'lucide-react';
+import { Pause, Plus, ShieldAlert, BarChart3, TrendingUp, Cpu, History, Trash2 } from 'lucide-react';
 import { derivAPI, SYNTHETIC_INDICES } from '../lib/derivAPI';
 import { supabase } from '../lib/supabase';
 
@@ -78,7 +78,6 @@ const DEFAULT_BOTS: Bot[] = [
 
 export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
   const [bots, setBots] = useState<Bot[]>(DEFAULT_BOTS);
-  const [activeBot, setActiveBot] = useState<Bot | null>(null);
   const [runningBotId, setRunningBotId] = useState<string | null>(null);
   
   // Bot Runner states

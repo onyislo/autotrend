@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   LogOut, RefreshCw, TrendingUp, Bot, BarChart2, Zap,
   ChevronRight, Activity, Menu, X, LayoutDashboard,
-  Copy, ChevronLeft, Repeat
+  Copy, Repeat
 } from 'lucide-react';
 import BotBuilder from './BotBuilder';
 import ChartsSection from './ChartsSection';
