@@ -440,7 +440,7 @@ export default function Dashboard() {
         )}
 
         {/* Main content */}
-        <main className={`flex-1 overflow-y-auto ${['charts', 'botbuilder'].includes(activeTab) ? 'p-0' : 'px-4 py-6'}`}>
+        <main className={`flex-1 ${['charts', 'botbuilder'].includes(activeTab) ? 'overflow-hidden p-0 flex flex-col' : 'overflow-y-auto px-4 py-6'}`}>
 
           {/* Dashboard */}
           {activeTab === 'dashboard' && (
@@ -499,17 +499,12 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* BotBuilder — no login required, loads bot.deriv.com directly */}
           {activeTab === 'botbuilder' && (
-            session ? (
-              <BotBuilder wsToken={session.wsToken} wsUrl={session.wsUrl} />
-            ) : (
-              <div className="flex flex-col items-center justify-center w-full h-[calc(100vh-3.5rem)] bg-white gap-3">
-                <div className="w-10 h-10 border-4 border-gray-100 border-t-emerald-500 rounded-full animate-spin" />
-                <p className="text-xs font-semibold text-gray-400 font-sans">Connecting to Deriv...</p>
-              </div>
-            )
+            <BotBuilder wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} />
           )}
 
+          {/* Charts — no login required, WebSocket connects directly from browser */}
           {activeTab === 'charts' && <ChartsSection />}
 
           {['quickbot', 'autotrade', 'copytrader'].includes(activeTab) && (
