@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Pause, Plus, ShieldAlert, BarChart3, TrendingUp, Cpu, History, Trash2 } from 'lucide-react';
 import { derivAPI, SYNTHETIC_INDICES } from '../lib/derivAPI';
 import { supabase } from '../lib/supabase';
+import { getUserData } from '../lib/finalAuth';
 
 interface BotStrategy {
   symbol: string;

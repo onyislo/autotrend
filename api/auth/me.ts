@@ -10,8 +10,8 @@ function parseCookies(header: string): Record<string, string> {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const cookies = parseCookies(req.headers.cookie ?? '');
-  const token = cookies['deriv_auth_token'];
-  const accountId = cookies['deriv_account_id'];
+  const token = (req.query.token as string) || cookies['deriv_auth_token'];
+  const accountId = (req.query.accountId as string) || cookies['deriv_account_id'];
   const appId = process.env.VITE_DERIV_APP_ID ?? process.env.DERIV_APP_ID ?? '';
 
   if (!token || !appId) {

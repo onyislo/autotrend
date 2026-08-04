@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LogOut, RefreshCw, TrendingUp, Bot, BarChart2, Zap,
   ChevronRight, Activity, Menu, X, LayoutDashboard,
@@ -289,20 +290,6 @@ export default function Dashboard() {
   const [session, setSession] = useState<SessionData | null>(null);
   const [accountMode, setAccountMode] = useState<'real' | 'demo'>('real');
 
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(r => { if (!r.ok) return null; return r.json(); })
-      .then((d: SessionData | null) => { if (d && Array.isArray(d.accounts)) setSession(d); })
-      .catch(() => null);
-  }, []);
-
-  useEffect(() => {
-    const iv = setInterval(() => setCountdown(c => { if (c <= 1) { setSignals(generateSignals()); return 20; } return c - 1; }), 1000);
-    return () => clearInterval(iv);
-  }, []);
-
-  const handleLogout = async () => { await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/'; };
-
   // Strict account resolution — NEVER fallback Demo account under Real mode
   const storedAuth = getUserData();
   const accountsList: Array<{ account_id?: string; account_type?: string; balance?: number | string; currency?: string; loginid?: string }> =
@@ -317,6 +304,54 @@ export default function Dashboard() {
   // Strict mode: if accountMode is 'real', ONLY return realAccount (never fallback to demoAccount)
   const currentAccount = accountMode === 'real' ? realAccount : demoAccount;
   const isRealMode = accountMode === 'real';
+  const currentAccountId = currentAccount?.account_id ?? currentAccount?.loginid ?? null;
+  const clientToken = storedAuth?.access_token;
+
+  useEffect(() => {
+    let url = '/api/auth/me';
+    const params = new URLSearchParams();
+    if (clientToken) {
+      params.append('token', clientToken);
+    }
+    if (currentAccountId) {
+      params.append('accountId', currentAccountId);
+    }
+    const queryString = params.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+
+    if (currentAccountId) {
+      document.cookie = `deriv_account_id=${currentAccountId}; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24}`;
+    }
+
+    fetch(url)
+      .then(r => { if (!r.ok) return null; return r.json(); })
+      .then((d: SessionData | null) => { 
+        if (d && Array.isArray(d.accounts)) {
+          setSession(d); 
+        }
+      })
+      .catch(() => null);
+  }, [currentAccountId, clientToken]);
+
+  useEffect(() => {
+    const iv = setInterval(() => setCountdown(c => { if (c <= 1) { setSignals(generateSignals()); return 20; } return c - 1; }), 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const handleLogout = async () => { 
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' }); 
+    } catch (e) {
+      console.error('Logout failed:', e);
+    }
+    localStorage.removeItem('deriv_auth');
+    sessionStorage.removeItem('auth_status');
+    document.cookie = 'deriv_session=; Path=/; Max-Age=0';
+    document.cookie = 'deriv_account_id=; Path=/; Max-Age=0';
+    window.location.href = '/'; 
+  };
 
   const fmt = (v?: number | string) => v !== undefined ? Number(v).toFixed(2) : '0.00';
 
@@ -398,17 +433,134 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      {/* Mobile tab menu */}
-      {mobileMenu && (
-        <div className="md:hidden bg-gray-800 border-b border-gray-700 px-4 py-3 grid grid-cols-3 gap-1 z-30">
-          {TABS.map(tab => (
-            <button key={tab.id} onClick={() => { setActiveTab(tab.id); setMobileMenu(false); }}
-              className={`flex items-center gap-1.5 px-2 py-2 rounded-lg text-xs font-medium ${activeTab === tab.id ? 'bg-red-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}>
-              {tab.icon}<span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Mobile sidebar drawer (opens from the left) */}
+      <AnimatePresence>
+        {mobileMenu && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileMenu(false)}
+            />
+            {/* Drawer Content */}
+            <motion.aside
+              className="fixed top-0 left-0 bottom-0 z-50 w-72 bg-white shadow-2xl flex flex-col md:hidden border-r border-gray-200"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            >
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between px-4 h-14 bg-gray-900 text-white flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <Logo size={28} />
+                  <span className="font-bold">Auto Trend X</span>
+                </div>
+                <button
+                  onClick={() => setMobileMenu(false)}
+                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-gray-300"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Account details and toggle in mobile drawer */}
+              <div className="p-4 border-b border-gray-100 bg-gray-50 flex-shrink-0">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Account</span>
+                  <button
+                    onClick={() => setAccountMode(m => m === 'real' ? 'demo' : 'real')}
+                    className={`text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${
+                      isRealMode ? 'border-emerald-300 text-emerald-600 bg-emerald-50' : 'border-yellow-300 text-yellow-600 bg-yellow-50'
+                    }`}
+                  >
+                    {isRealMode ? '● Real' : '● Demo'}
+                  </button>
+                </div>
+
+                {currentAccount ? (
+                  <>
+                    <p className="font-bold text-gray-900 text-base">USD {fmt(currentAccount.balance)}</p>
+                    <p className="text-xs text-gray-400 truncate font-mono">{currentAccount.loginid ?? currentAccount.account_id ?? '—'}</p>
+                  </>
+                ) : (
+                  <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-center">
+                    <p className="text-xs font-bold text-red-600">{isRealMode ? 'No Real Account Found' : 'No Demo Account'}</p>
+                    <p className="text-[10px] text-gray-500">Switch to {isRealMode ? 'Demo' : 'Real'}</p>
+                  </div>
+                )}
+
+                {/* Show both accounts list when available inside mobile drawer */}
+                <div className="mt-3 space-y-1">
+                  {realAccount ? (
+                    <button
+                      onClick={() => {
+                        setAccountMode('real');
+                      }}
+                      className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${
+                        isRealMode ? 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100' : 'text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      Real · USD {fmt(realAccount.balance)} ({realAccount.loginid ?? realAccount.account_id})
+                    </button>
+                  ) : (
+                    <div className="text-[11px] text-gray-400 px-2 py-1 italic">Real: No account found</div>
+                  )}
+
+                  {demoAccount ? (
+                    <button
+                      onClick={() => {
+                        setAccountMode('demo');
+                      }}
+                      className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${
+                        !isRealMode ? 'bg-yellow-50 text-yellow-700 font-semibold border border-yellow-100' : 'text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      Demo · USD {fmt(demoAccount.balance)} ({demoAccount.loginid ?? demoAccount.account_id})
+                    </button>
+                  ) : (
+                    <div className="text-[11px] text-gray-400 px-2 py-1 italic">Demo: No account found</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Navigation list */}
+              <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+                {TABS.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setMobileMenu(false);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                      activeTab === tab.id
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    <span className={activeTab === tab.id ? 'text-emerald-600' : 'text-gray-400'}>{tab.icon}</span>
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+
+              {/* Logout button at bottom of mobile drawer */}
+              <div className="p-3 border-t border-gray-100 flex-shrink-0">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors border border-red-200"
+                >
+                  <LogOut size={16} />Logout
+                </button>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Ticker */}
       <div className="bg-white border-b border-gray-100 overflow-hidden py-1.5">
