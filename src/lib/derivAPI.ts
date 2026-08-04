@@ -8,10 +8,11 @@ export class DerivAPI {
 
   constructor(private appId: string) {}
 
-  connect(): Promise<void> {
+  connect(customWsUrl?: string): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        this.ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${this.appId}`)
+        const url = customWsUrl || `wss://ws.derivws.com/websockets/v3?app_id=${this.appId}`;
+        this.ws = new WebSocket(url)
         
         this.ws.onopen = () => {
           this.isConnected = true

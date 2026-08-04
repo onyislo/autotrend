@@ -13,13 +13,14 @@ interface Props {
   onGoToFreeBots?: () => void;
 }
 
-export default function BotBuilder({ wsToken, onGoToFreeBots }: Props) {
+export default function BotBuilder({ wsToken, wsUrl, onGoToFreeBots }: Props) {
   // Pass wsToken or fallback to empty string
   return (
     <div className="flex flex-col w-full h-full bg-gray-50 overflow-hidden">
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <AutoBotsPanel
           wsToken={wsToken ?? null}
+          wsUrl={wsUrl ?? null}
           userEmail={null}
           userId={null}
           onGoToFreeBots={onGoToFreeBots}

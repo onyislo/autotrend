@@ -35,12 +35,13 @@ interface LogEntry {
 
 interface Props {
   wsToken: string | null;
+  wsUrl: string | null;
   userEmail: string | null;
   userId: string | null;
   onGoToFreeBots?: () => void;
 }
 
-export default function AutoBotsPanel({ wsToken, userEmail, userId, onGoToFreeBots }: Props) {
+export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoToFreeBots }: Props) {
   const [bots, setBots] = useState<Bot[]>([]);
   const [runningBotId, setRunningBotId] = useState<string | null>(null);
   
@@ -164,7 +165,7 @@ export default function AutoBotsPanel({ wsToken, userEmail, userId, onGoToFreeBo
 
     try {
       addLog('Connecting to Deriv WebSocket API...', 'info');
-      await derivAPI.connect();
+      await derivAPI.connect(wsUrl ?? undefined);
       
       addLog('Authorizing secure session token...', 'info');
       await derivAPI.authorize(wsToken!);
