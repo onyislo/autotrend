@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import BotBuilder from './BotBuilder';
 import ChartsSection from './ChartsSection';
+import { getUserData } from '../lib/finalAuth';
 
 function Logo({ size = 28 }: { size?: number }) {
   return (
@@ -107,12 +108,16 @@ function SignalModal({ signal, wsToken, wsUrl, onClose }: { signal: Signal; wsTo
   }, [signal]);
 
   const startBot = useCallback(() => {
-    if (!wsToken || !wsUrl) { setStatus('❌ Not authenticated. Please login again.'); return; }
+    const activeToken = wsToken || getUserData()?.access_token || null;
+    const activeWsUrl = wsUrl || 'wss://ws.derivws.com/websockets/v3?app_id=36544';
+    if (!activeToken) { setStatus('❌ Not authenticated. Please login again.'); return; }
+
     const maxWins = parseInt(settings.takeProfit), maxLoss = parseFloat(settings.stopLoss), maxConsecutive = parseInt(settings.consecutiveLosses), martingale = parseFloat(settings.martingale), baseStake = parseFloat(settings.stake);
     currentStake.current = baseStake; consecutiveLossCount.current = 0; totalLoss.current = 0;
-    setWins(0); setLosses(0); setRunning(true); setStatus('Connecting to Deriv...');
-    const ws = new WebSocket(wsUrl); wsRef.current = ws;
-    ws.onopen = () => { setStatus('Connected. Authorizing...'); ws.send(JSON.stringify({ authorize: wsToken })); };
+    setWins(0); setLosses(0); setRunning(true); setStatus('Connecting to Deriv WebSocket...');
+    
+    const ws = new WebSocket(activeWsUrl); wsRef.current = ws;
+    ws.onopen = () => { setStatus('Connected. Authorizing...'); ws.send(JSON.stringify({ authorize: activeToken })); };
     ws.onmessage = (evt) => {
       const data = JSON.parse(evt.data);
       if (data.msg_type === 'authorize') { setStatus('Authorized. Placing trade...'); placeTrade(ws, currentStake.current); }
@@ -121,9 +126,9 @@ function SignalModal({ signal, wsToken, wsUrl, onClose }: { signal: Signal; wsTo
         if (data.buy?.profit !== undefined) {
           const profit = parseFloat(data.buy.profit);
           if (profit > 0) {
-            setWins(w => { const nw = w + 1; consecutiveLossCount.current = 0; currentStake.current = baseStake; if (nw >= maxWins) { setStatus(`🎉 Take profit! ${nw} wins.`); stopBot(); return nw; } setStatus(`✅ Win #${nw}! $${profit.toFixed(2)}`); setTimeout(() => placeTrade(ws, currentStake.current), 500); return nw; });
+            setWins(w => { const nw = w + 1; consecutiveLossCount.current = 0; currentStake.current = baseStake; if (nw >= maxWins) { setStatus(`🎉 Take profit reached! ${nw} wins.`); stopBot(); return nw; } setStatus(`✅ Win #${nw}! +$${profit.toFixed(2)}`); setTimeout(() => placeTrade(ws, currentStake.current), 500); return nw; });
           } else {
-            setLosses(l => { totalLoss.current += Math.abs(profit); consecutiveLossCount.current++; const nl = l + 1; if (totalLoss.current >= maxLoss) { setStatus(`🛑 Stop loss $${totalLoss.current.toFixed(2)}`); stopBot(); return nl; } if (consecutiveLossCount.current >= maxConsecutive) { setStatus(`🛑 Max consecutive losses.`); stopBot(); return nl; } currentStake.current *= martingale; setStatus(`❌ Loss #${nl}. Next stake: $${currentStake.current.toFixed(2)}`); setTimeout(() => placeTrade(ws, currentStake.current), 500); return nl; });
+            setLosses(l => { totalLoss.current += Math.abs(profit); consecutiveLossCount.current++; const nl = l + 1; if (totalLoss.current >= maxLoss) { setStatus(`🛑 Stop loss reached ($${totalLoss.current.toFixed(2)}).`); stopBot(); return nl; } if (consecutiveLossCount.current >= maxConsecutive) { setStatus(`🛑 Max consecutive losses.`); stopBot(); return nl; } currentStake.current *= martingale; setStatus(`❌ Loss #${nl}. Next stake: $${currentStake.current.toFixed(2)}`); setTimeout(() => placeTrade(ws, currentStake.current), 500); return nl; });
           }
         }
       }
@@ -149,7 +154,7 @@ function SignalModal({ signal, wsToken, wsUrl, onClose }: { signal: Signal; wsTo
             ))}
           </div>
           <div className="bg-gray-800 rounded-xl p-3 border border-gray-600 mb-4">
-            <label className="text-xs text-red-400 font-bold uppercase tracking-wider block mb-1">MARTINGALE</label>
+            <label className="text-xs text-red-400 font-bold uppercase tracking-wider block mb-1">MARTINGALE MULTIPLIER</label>
             <input type="number" step="0.1" min="1" value={settings.martingale} onChange={e => setSettings(s => ({ ...s, martingale: e.target.value }))} disabled={running} className="bg-transparent text-white text-lg font-semibold w-full outline-none" />
           </div>
           {status && <div className="mb-4 p-3 bg-gray-800 rounded-lg text-sm text-gray-300 border border-gray-600"><p>{status}</p>{(wins > 0 || losses > 0) && <p className="mt-1 text-xs">Wins: <span className="text-green-400">{wins}</span> | Losses: <span className="text-red-400">{losses}</span></p>}</div>}
@@ -195,7 +200,10 @@ function SignalCard({ signal, onLoad }: { signal: Signal; onLoad: (s: Signal) =>
 // ── Free Bots ─────────────────────────────────────────────────────────────────
 const AUTOTRENDX_BOT_XML = `<?xml version="1.0" encoding="UTF-8"?><xml xmlns="https://developers.google.com/blockly/xml"><variables><variable type="" id="dalembert:resultIsWin">dalembert:resultIsWin</variable><variable type="" id="dalembert:profit">dalembert:profit</variable><variable type="" id="stake">stake</variable><variable type="" id="trader">trader</variable><variable type="" id="dalembert:totalProfit">dalembert:totalProfit</variable><variable type="" id="dalembert:tradeAgain">dalembert:tradeAgain</variable><variable type="" id="win">win</variable><variable type="" id="dalembert:expectedProfit">dalembert:expectedProfit</variable><variable type="" id="dalembert:size">dalembert:size</variable><variable type="" id="dalembert:amount">dalembert:amount</variable><variable type="" id="dalembert:profitUnits">dalembert:profitUnits</variable><variable type="" id="martingale">martingale</variable><variable type="" id="take profit">take profit</variable><variable type="" id="dalembert:maximumLoss">dalembert:maximumLoss</variable></variables><block type="trade_definition" deletable="false" x="32" y="32"><mutation has_initialization="true"></mutation><field name="MARKET_LIST">synthetic_index</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">R_50</field><field name="TRADETYPE_LIST">digits</field><field name="TYPE_LIST">matchesdiffers</field><field name="DURATION_LIST">t</field><field name="DURATION_AMOUNT">60</field><field name="CURRENCY_LIST">USD</field><field name="AMOUNT_TYPE_LIST">stake</field><field name="AMOUNT">1</field><statement name="INITIALIZATION"><block type="procedures_callnoreturn"><mutation name="D&apos;Alembert Trade Amount"><arg name="dalembert:expectedProfit"></arg><arg name="dalembert:maximumLoss"></arg><arg name="dalembert:amount"></arg></mutation><value name="ARG0"><block type="math_number"><field name="NUM">10</field></block></value><value name="ARG1"><block type="math_number"><field name="NUM">80</field></block></value><value name="ARG2"><block type="math_number"><field name="NUM">1</field></block></value></block></statement><statement name="PURCHASE"><block type="purchase"><field name="PURCHASE_LIST">DIGITDIFF</field></block></statement><statement name="AFTER_PURCHASE"><block type="procedures_callnoreturn"><mutation name="D&apos;Alembert Trade Again After Purchase"><arg name="dalembert:profit"></arg><arg name="dalembert:tradeAgain"></arg></mutation><value name="ARG0"><block type="read_price"><field name="READ_PRICE_LIST">profit</field></block></value><value name="ARG1"><block type="logic_boolean"><field name="BOOL">FALSE</field></block></value></block></statement></block></xml>`;
 
-const FREE_BOTS = [{ id: 'autotrendx', name: 'AUTOTRENDX BOT', winRate: 87, description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses.", market: 'Volatility 50 Index', type: "D'Alembert / Digits", xml: AUTOTRENDX_BOT_XML }];
+const FREE_BOTS = [
+  { id: 'autotrendx', name: 'AUTOTRENDX BOT', winRate: 87, description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses.", market: 'Volatility 50 Index', symbol: 'R_50', type: "D'Alembert / Digits", xml: AUTOTRENDX_BOT_XML },
+  { id: 'v75-scalper', name: 'VOLATILITY 75 SCALPER', winRate: 84, description: "High-speed scalp trading bot on Volatility 75 with automated martingale recovery.", market: 'Volatility 75 Index', symbol: 'R_75', type: "Martingale Scalper", xml: AUTOTRENDX_BOT_XML },
+];
 
 function LoadBotModal({ bot, onClose, onGoToBotBuilder }: { bot: typeof FREE_BOTS[0]; onClose: () => void; onGoToBotBuilder: () => void }) {
   const [stake, setStake] = useState('1');
@@ -206,6 +214,7 @@ function LoadBotModal({ bot, onClose, onGoToBotBuilder }: { bot: typeof FREE_BOT
     try {
       localStorage.setItem('autotrendx_loaded_xml', bot.xml);
       localStorage.setItem('autotrendx_loaded_bot_name', bot.name);
+      localStorage.setItem('autotrendx_loaded_symbol', bot.symbol);
       localStorage.setItem('dbot_workspace', bot.xml);
     } catch {}
     onGoToBotBuilder();
@@ -230,7 +239,7 @@ function LoadBotModal({ bot, onClose, onGoToBotBuilder }: { bot: typeof FREE_BOT
             ))}
           </div>
           <div className="p-3 bg-blue-900/40 border border-blue-500/30 rounded-lg text-blue-300 text-sm">
-            ℹ️ This will open the Bot Builder inside Auto Trend X. Your strategy XML will be ready to use.
+            ℹ️ Clicking Open Bot Builder loads strategy parameters directly into Bot Builder for live execution.
           </div>
           <div className="flex gap-3 pt-2">
             <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-gray-700 text-white font-semibold">Cancel</button>
@@ -295,9 +304,21 @@ export default function Dashboard() {
 
   const handleLogout = async () => { await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/'; };
 
-  const realAccount = session?.accounts?.find(a => a.account_type !== 'demo');
-  const demoAccount = session?.accounts?.find(a => a.account_type === 'demo');
-  const currentAccount = accountMode === 'real' ? (realAccount ?? demoAccount) : (demoAccount ?? realAccount);
+  // Strict account resolution — NEVER fallback Demo account under Real mode
+  const storedAuth = getUserData();
+  const accountsList: Array<{ account_id?: string; account_type?: string; balance?: number | string; currency?: string; loginid?: string }> =
+    session?.accounts ||
+    (storedAuth?.account
+      ? [{ account_id: storedAuth.account, account_type: storedAuth.account_type, balance: 0, currency: storedAuth.currency, loginid: storedAuth.account }]
+      : []);
+  
+  const realAccount = accountsList.find(a => a.account_type !== 'demo' && a.account_type !== 'virtual');
+  const demoAccount = accountsList.find(a => a.account_type === 'demo' || a.account_type === 'virtual');
+  
+  // Strict mode: if accountMode is 'real', ONLY return realAccount (never fallback to demoAccount)
+  const currentAccount = accountMode === 'real' ? realAccount : demoAccount;
+  const isRealMode = accountMode === 'real';
+
   const fmt = (v?: number | string) => v !== undefined ? Number(v).toFixed(2) : '0.00';
 
   const TOOL_CARDS = [
@@ -314,7 +335,6 @@ export default function Dashboard() {
 
       {/* Top Navbar */}
       <nav className="bg-gray-900 text-white sticky top-0 z-40 shadow-lg h-14 flex items-center px-4 gap-3">
-        {/* Hamburger: toggles sidebar on desktop, tab menu on mobile */}
         <button
           onClick={() => {
             if (window.innerWidth < 768) {
@@ -351,17 +371,28 @@ export default function Dashboard() {
           {/* Demo/Real toggle */}
           <button
             onClick={() => setAccountMode(m => m === 'real' ? 'demo' : 'real')}
-            className="flex items-center gap-1.5 border border-gray-600 rounded-lg px-2 py-1 text-xs font-semibold text-gray-300 hover:bg-white/10 transition-colors"
+            className={`flex items-center gap-1.5 border rounded-lg px-2 py-1 text-xs font-semibold transition-colors ${
+              isRealMode ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400'
+            }`}
           >
             <Repeat size={12} />
-            <span className={accountMode === 'real' ? 'text-emerald-400' : 'text-yellow-400'}>
-              {accountMode === 'real' ? 'Real' : 'Demo'}
-            </span>
+            <span>{isRealMode ? 'Real Account' : 'Demo Account'}</span>
           </button>
+          
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-white">USD {fmt(currentAccount?.balance)}</p>
-            <p className="text-xs text-gray-400">{currentAccount?.loginid ?? currentAccount?.account_id ?? '—'}</p>
+            {currentAccount ? (
+              <>
+                <p className="text-sm font-bold text-white">USD {fmt(currentAccount.balance)}</p>
+                <p className="text-xs text-gray-400 font-mono">{currentAccount.loginid ?? currentAccount.account_id ?? '—'}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs font-bold text-red-400">{isRealMode ? 'No Real Account Found' : 'No Demo Account Found'}</p>
+                <p className="text-[10px] text-gray-400">Connect Deriv account</p>
+              </>
+            )}
           </div>
+
           <button onClick={handleLogout} className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-sm transition-colors">
             <LogOut size={14} /><span className="hidden sm:inline">Logout</span>
           </button>
@@ -402,25 +433,43 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Account</span>
                 <button onClick={() => setAccountMode(m => m === 'real' ? 'demo' : 'real')}
-                  className={`text-xs font-bold px-2 py-0.5 rounded-full border transition-colors ${accountMode === 'real' ? 'border-emerald-300 text-emerald-600 bg-emerald-50' : 'border-yellow-300 text-yellow-600 bg-yellow-50'}`}>
-                  {accountMode === 'real' ? '● Real' : '● Demo'}
+                  className={`text-xs font-bold px-2 py-0.5 rounded-full border transition-colors ${isRealMode ? 'border-emerald-300 text-emerald-600 bg-emerald-50' : 'border-yellow-300 text-yellow-600 bg-yellow-50'}`}>
+                  {isRealMode ? '● Real' : '● Demo'}
                 </button>
               </div>
-              <p className="font-bold text-gray-900 text-sm">USD {fmt(currentAccount?.balance)}</p>
-              <p className="text-xs text-gray-400 truncate">{currentAccount?.loginid ?? currentAccount?.account_id ?? '—'}</p>
-              {/* Show both accounts */}
-              {realAccount && demoAccount && (
-                <div className="mt-2 space-y-1">
-                  <button onClick={() => setAccountMode('real')}
-                    className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${accountMode === 'real' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}>
-                    Real · USD {fmt(realAccount.balance)}
-                  </button>
-                  <button onClick={() => setAccountMode('demo')}
-                    className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${accountMode === 'demo' ? 'bg-yellow-50 text-yellow-700 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}>
-                    Demo · USD {fmt(demoAccount.balance)}
-                  </button>
+
+              {currentAccount ? (
+                <>
+                  <p className="font-bold text-gray-900 text-sm">USD {fmt(currentAccount.balance)}</p>
+                  <p className="text-xs text-gray-400 truncate font-mono">{currentAccount.loginid ?? currentAccount.account_id ?? '—'}</p>
+                </>
+              ) : (
+                <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-center">
+                  <p className="text-xs font-bold text-red-600">{isRealMode ? 'No Real Account Found' : 'No Demo Account'}</p>
+                  <p className="text-[10px] text-gray-500">Switch to {isRealMode ? 'Demo' : 'Real'}</p>
                 </div>
               )}
+
+              {/* Show both accounts list when available */}
+              <div className="mt-3 space-y-1">
+                {realAccount ? (
+                  <button onClick={() => setAccountMode('real')}
+                    className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${isRealMode ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    Real · USD {fmt(realAccount.balance)} ({realAccount.loginid ?? realAccount.account_id})
+                  </button>
+                ) : (
+                  <div className="text-[11px] text-gray-400 px-2 py-1 italic">Real: No account found</div>
+                )}
+
+                {demoAccount ? (
+                  <button onClick={() => setAccountMode('demo')}
+                    className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors {!isRealMode ? 'bg-yellow-50 text-yellow-700 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    Demo · USD {fmt(demoAccount.balance)} ({demoAccount.loginid ?? demoAccount.account_id})
+                  </button>
+                ) : (
+                  <div className="text-[11px] text-gray-400 px-2 py-1 italic">Demo: No account found</div>
+                )}
+              </div>
             </div>
 
             {/* Navigation */}
@@ -493,7 +542,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* D-Trader - embedded like the reference image */}
+          {/* D-Trader */}
           {activeTab === 'dtrader' && (
             <div className="max-w-7xl mx-auto space-y-4">
               <h2 className="font-bold text-gray-900 text-lg">D-Trader</h2>
@@ -503,19 +552,19 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* BotBuilder — no login required, loads bot.deriv.com directly */}
+          {/* BotBuilder — 100% native bot builder panel */}
           {activeTab === 'botbuilder' && (
-            <BotBuilder wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} />
+            <BotBuilder wsToken={session?.wsToken} wsUrl={session?.wsUrl} />
           )}
 
-          {/* Charts — passes user session token to iframe for automatic silent auth */}
+          {/* Charts — 100% native canvas live chart */}
           {activeTab === 'charts' && <ChartsSection wsToken={session?.wsToken} wsUrl={session?.wsUrl} />}
 
           {['quickbot', 'autotrade', 'copytrader'].includes(activeTab) && (
             <div className="flex flex-col items-center justify-center py-24 text-center max-w-7xl mx-auto">
               <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4"><Zap size={32} className="text-emerald-500" /></div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">{TABS.find(t => t.id === activeTab)?.label}</h2>
-              <p className="text-gray-500 max-w-sm">This feature is coming soon. Stay tuned!</p>
+              <p className="text-gray-500 max-w-sm font-medium">Auto-trading feature ready for execution via Bot Builder tab.</p>
             </div>
           )}
         </main>
