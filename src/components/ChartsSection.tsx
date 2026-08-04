@@ -3,11 +3,16 @@
  *
  * Embeds the official Deriv SmartCharts via iframe — the same chart engine
  * used inside bot.deriv.com and by virtually every Deriv third-party platform.
- * No login required. Symbol selection is passed as a URL parameter.
+ * Silently passes user auth token when available so no login dialog pops up inside iframe.
  */
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+
+interface Props {
+  wsToken?: string | null;
+  wsUrl?: string | null;
+}
 
 // ─── Market list ──────────────────────────────────────────────────────────────
 const MARKETS = [
@@ -43,15 +48,19 @@ const MARKETS = [
 const DEFAULT_SYMBOL = MARKETS[4]; // Volatility 100 (1s) Index
 
 // ─── Build the SmartCharts iframe URL ─────────────────────────────────────────
-// This is the chart engine used by bot.deriv.com and virtually all Deriv
-// third-party sites — no auth required for viewing.
-function buildChartUrl(symbol: string): string {
+function buildChartUrl(symbol: string, wsToken?: string | null): string {
+  const appId = import.meta.env.VITE_DERIV_APP_ID || '36544';
   const params = new URLSearchParams({
     symbol,
-    granularity: '0',       // tick chart (most live)
+    granularity: '0',       // tick chart
     chart_type: 'line',
-    hide_bottom_widgets: '1',
+    app_id: appId,
   });
+
+  if (wsToken) {
+    params.set('token', wsToken);
+  }
+
   return `https://smartcharts.deriv.com?${params.toString()}`;
 }
 
@@ -138,11 +147,11 @@ function MarketDropdown({
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function ChartsSection() {
+export default function ChartsSection({ wsToken }: Props) {
   const [selected, setSelected] = useState(DEFAULT_SYMBOL);
   const [loading, setLoading] = useState(true);
 
-  const chartUrl = buildChartUrl(selected.symbol);
+  const chartUrl = buildChartUrl(selected.symbol, wsToken);
 
   // When symbol changes reset the loading indicator
   const handleSymbolChange = (m: typeof MARKETS[0]) => {
@@ -188,12 +197,13 @@ export default function ChartsSection() {
         {/* Live indicator */}
         <div className="ml-auto flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs font-medium" style={{ color: '#6b7280' }}>Live · Deriv SmartCharts</span>
+          <span className="text-xs font-medium" style={{ color: '#6b7280' }}>
+            Live · {wsToken ? 'Authenticated' : 'Guest'}
+          </span>
         </div>
       </div>
 
       {/* ── SmartCharts iframe ─────────────────────────────────────────── */}
-      {/* Same embedding pattern as BotBuilder uses for bot.deriv.com      */}
       <div className="relative flex-1 overflow-hidden">
         {/* Loading overlay */}
         {loading && (

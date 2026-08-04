@@ -203,7 +203,11 @@ function LoadBotModal({ bot, onClose, onGoToBotBuilder }: { bot: typeof FREE_BOT
   const [stopLoss, setStopLoss] = useState('5');
 
   const handleLoad = () => {
-    // Navigate to Bot Builder tab inside the site (no external redirect)
+    try {
+      localStorage.setItem('autotrendx_loaded_xml', bot.xml);
+      localStorage.setItem('autotrendx_loaded_bot_name', bot.name);
+      localStorage.setItem('dbot_workspace', bot.xml);
+    } catch {}
     onGoToBotBuilder();
     onClose();
   };
@@ -504,8 +508,8 @@ export default function Dashboard() {
             <BotBuilder wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} />
           )}
 
-          {/* Charts — no login required, WebSocket connects directly from browser */}
-          {activeTab === 'charts' && <ChartsSection />}
+          {/* Charts — passes user session token to iframe for automatic silent auth */}
+          {activeTab === 'charts' && <ChartsSection wsToken={session?.wsToken} wsUrl={session?.wsUrl} />}
 
           {['quickbot', 'autotrade', 'copytrader'].includes(activeTab) && (
             <div className="flex flex-col items-center justify-center py-24 text-center max-w-7xl mx-auto">
