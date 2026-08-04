@@ -95,17 +95,22 @@ export class DerivAPI {
   }
 
   // Buy a contract
-  async buyContract(contractType: string, symbol: string, amount: number, duration: number): Promise<any> {
+  async buyContract(contractType: string, symbol: string, amount: number, duration: number, barrier?: string): Promise<any> {
+    const parameters: any = {
+      contract_type: contractType,
+      symbol: symbol,
+      amount: amount,
+      duration: duration,
+      duration_unit: 't', // ticks
+      basis: 'stake'
+    };
+    if (barrier || ['DIGITDIFF', 'DIGITMATCH', 'DIGITOVER', 'DIGITUNDER'].includes(contractType)) {
+      parameters.barrier = barrier || '5';
+    }
     return this.sendRequest({
       buy: 1,
-      parameters: {
-        contract_type: contractType,
-        symbol: symbol,
-        amount: amount,
-        duration: duration,
-        duration_unit: 't', // ticks
-        basis: 'stake'
-      }
+      price: amount,
+      parameters
     })
   }
 

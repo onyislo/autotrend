@@ -5,7 +5,11 @@ import { handleCallback, isLoggedIn } from '../lib/finalAuth';
 
 export default function Router() {
   const [showDashboard, setShowDashboard] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    return path === '/auth/callback' || params.has('code') || params.has('error');
+  });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

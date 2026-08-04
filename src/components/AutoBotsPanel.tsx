@@ -36,48 +36,11 @@ interface Props {
   wsToken: string | null;
   userEmail: string | null;
   userId: string | null;
+  onGoToFreeBots?: () => void;
 }
 
-// Fallback premium bots pre-loaded in the code in case the database isn't fully migrated yet
-const DEFAULT_BOTS: Bot[] = [
-  {
-    id: 'default-martingale-v75',
-    name: 'Admin Martingale (Volatility 75)',
-    description: 'Proprietary trend-following martingale strategy. Automatically doubles stake on loss to secure recovery.',
-    is_public: true,
-    strategy: {
-      symbol: 'R_75',
-      contractType: 'CALL',
-      amount: 1,
-      duration: 5,
-      martingale: true,
-      martingaleMultiplier: 2,
-      maxMartingaleSteps: 4,
-      stopLoss: 25,
-      takeProfit: 50,
-    }
-  },
-  {
-    id: 'default-digit-scalper',
-    name: 'Admin Volatility 100 Scalper',
-    description: 'High-speed scalp trades targeting short momentum shifts. Ideal for volatile market sweeps.',
-    is_public: true,
-    strategy: {
-      symbol: 'R_100',
-      contractType: 'PUT',
-      amount: 2,
-      duration: 5,
-      martingale: true,
-      martingaleMultiplier: 1.8,
-      maxMartingaleSteps: 3,
-      stopLoss: 30,
-      takeProfit: 60,
-    }
-  }
-];
-
-export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
-  const [bots, setBots] = useState<Bot[]>(DEFAULT_BOTS);
+export default function AutoBotsPanel({ wsToken, userEmail, userId, onGoToFreeBots }: Props) {
+  const [bots, setBots] = useState<Bot[]>([]);
   const [runningBotId, setRunningBotId] = useState<string | null>(null);
   
   // Bot Runner states
@@ -93,10 +56,10 @@ export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
   const [newBotData, setNewBotData] = useState({
     name: '',
     description: '',
-    symbol: 'R_75',
-    contractType: 'CALL',
+    symbol: 'R_50',
+    contractType: 'DIGITDIFF',
     amount: 1,
-    duration: 5,
+    duration: 1,
     martingale: true,
     martingaleMultiplier: 2,
     maxMartingaleSteps: 4,
@@ -115,6 +78,33 @@ export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
   }, []);
 
   const loadBots = async () => {
+    const list: Bot[] = [];
+    
+    // Check if user loaded AUTOTRENDX BOT from Free Bots tab
+    try {
+      const loadedName = localStorage.getItem('autotrendx_loaded_bot_name');
+      const loadedSymbol = localStorage.getItem('autotrendx_loaded_symbol') || 'R_50';
+      if (loadedName) {
+        list.push({
+          id: 'loaded-autotrendx-bot',
+          name: loadedName,
+          description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses.",
+          is_public: true,
+          strategy: {
+            symbol: loadedSymbol,
+            contractType: 'DIGITDIFF',
+            amount: 1,
+            duration: 1,
+            martingale: true,
+            martingaleMultiplier: 2,
+            maxMartingaleSteps: 4,
+            stopLoss: 20,
+            takeProfit: 40,
+          }
+        });
+      }
+    } catch {}
+
     try {
       const { data, error } = await supabase
         .from('trading_bots')
@@ -122,11 +112,13 @@ export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
         .eq('is_public', true);
       
       if (!error && data && data.length > 0) {
-        setBots([...DEFAULT_BOTS, ...data]);
+        list.push(...data);
       }
     } catch {
-      // Fall back to DEFAULT_BOTS if table/policy doesn't exist yet
+      // Ignore DB fallback error
     }
+
+    setBots(list);
   };
 
   const addLog = (text: string, type: LogEntry['type'] = 'info') => {
@@ -485,11 +477,32 @@ export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
         <div>
           <h3 className="font-bold text-gray-900 text-lg">Available Trading Bots</h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            Click Start Bot to activate the proprietary algorithms on your own account session.
+            Click Start Bot to activate the strategy algorithm on your own account session.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {bots.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center space-y-4 shadow-sm">
+            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto text-emerald-600 font-bold text-xl">
+              🤖
+            </div>
+            <div>
+              <h4 className="font-bold text-gray-900 text-base mb-1">No Bot Loaded in Bot Builder</h4>
+              <p className="text-gray-500 text-xs max-w-md mx-auto">
+                Go to the Free Bots tab and click <span className="font-bold text-gray-700">"Load bot"</span> on <span className="font-bold text-emerald-600">AUTOTRENDX BOT</span> to load it into Bot Builder for trading execution.
+              </p>
+            </div>
+            {onGoToFreeBots && (
+              <button
+                onClick={onGoToFreeBots}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition-all shadow-sm"
+              >
+                Go to Free Bots
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {bots.map((bot) => (
             <div
               key={bot.id}
@@ -572,6 +585,7 @@ export default function AutoBotsPanel({ wsToken, userEmail, userId }: Props) {
             </div>
           ))}
         </div>
+        )}
       </div>
 
       {/* Bot Creator Modal (Admin Only) */}

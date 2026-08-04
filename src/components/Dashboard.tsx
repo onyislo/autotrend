@@ -202,7 +202,6 @@ const AUTOTRENDX_BOT_XML = `<?xml version="1.0" encoding="UTF-8"?><xml xmlns="ht
 
 const FREE_BOTS = [
   { id: 'autotrendx', name: 'AUTOTRENDX BOT', winRate: 87, description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses.", market: 'Volatility 50 Index', symbol: 'R_50', type: "D'Alembert / Digits", xml: AUTOTRENDX_BOT_XML },
-  { id: 'v75-scalper', name: 'VOLATILITY 75 SCALPER', winRate: 84, description: "High-speed scalp trading bot on Volatility 75 with automated martingale recovery.", market: 'Volatility 75 Index', symbol: 'R_75', type: "Martingale Scalper", xml: AUTOTRENDX_BOT_XML },
 ];
 
 function LoadBotModal({ bot, onClose, onGoToBotBuilder }: { bot: typeof FREE_BOTS[0]; onClose: () => void; onGoToBotBuilder: () => void }) {
@@ -554,7 +553,7 @@ export default function Dashboard() {
 
           {/* BotBuilder — 100% native bot builder panel */}
           {activeTab === 'botbuilder' && (
-            <BotBuilder wsToken={session?.wsToken} wsUrl={session?.wsUrl} />
+            <BotBuilder wsToken={session?.wsToken} wsUrl={session?.wsUrl} onGoToFreeBots={() => setActiveTab('freebots')} />
           )}
 
           {/* Charts — 100% native canvas live chart */}
