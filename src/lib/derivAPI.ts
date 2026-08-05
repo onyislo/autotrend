@@ -5,6 +5,7 @@ export class DerivAPI {
   private messageQueue: any[] = []
   private requestId = 0
   private callbacks: Map<number, (response: any) => void> = new Map()
+  private currency = 'USD'
 
   constructor(private appId: string) {}
 
@@ -90,9 +91,13 @@ export class DerivAPI {
 
   // Authorize user with API token
   async authorize(token: string): Promise<any> {
-    return this.sendRequest({
+    const response = await this.sendRequest({
       authorize: token
-    })
+    });
+    if (response?.authorize?.currency) {
+      this.currency = response.authorize.currency;
+    }
+    return response;
   }
 
   // Buy a contract
@@ -101,6 +106,7 @@ export class DerivAPI {
       contract_type: contractType,
       symbol: symbol,
       amount: amount,
+      currency: this.currency,
       duration: duration,
       duration_unit: 't', // ticks
       basis: 'stake'

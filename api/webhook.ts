@@ -93,13 +93,17 @@ async function executeTrade(token: string, symbol: string, contractType: string,
             return;
           }
           
+          const currency = response.authorize?.currency || 'USD';
+          
           // Step 2: Send buy contract request
           ws.send(JSON.stringify({
             buy: 1,
+            price: amount,
             parameters: {
               contract_type: contractType,
               symbol: symbol,
               amount: amount,
+              currency: currency,
               duration: duration,
               duration_unit: durationUnit,
               basis: 'stake'
