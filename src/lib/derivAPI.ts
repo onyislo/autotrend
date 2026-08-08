@@ -108,7 +108,7 @@ export class DerivAPI {
     const req: any = {
       proposal: 1,
       contract_type: contractType,
-      symbol: symbol,
+      underlying_symbol: symbol,
       amount: amount,
       currency: this.currency,
       duration: duration,
@@ -121,7 +121,7 @@ export class DerivAPI {
     const prop = await this.sendRequest(req);
     return this.sendRequest({
       buy: prop.proposal.id,
-      price: prop.proposal.ask_price
+      price: prop.proposal.ask_price || amount
     });
   }
 

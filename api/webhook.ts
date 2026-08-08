@@ -95,22 +95,40 @@ async function executeTrade(token: string, symbol: string, contractType: string,
           
           const currency = response.authorize?.currency || 'USD';
           
-          // Step 2: Send buy contract request
-          ws.send(JSON.stringify({
-            buy: 1,
-            price: amount,
-            parameters: {
-              contract_type: contractType,
-              symbol: symbol,
-              amount: amount,
-              currency: currency,
-              duration: duration,
-              duration_unit: durationUnit,
-              basis: 'stake'
-            },
+          // Step 2: Send proposal request
+          const proposalReq: Record<string, unknown> = {
+            proposal: 1,
+            contract_type: contractType,
+            underlying_symbol: symbol,
+            amount: amount,
+            currency: currency,
+            duration: duration,
+            duration_unit: durationUnit,
+            basis: 'stake',
             req_id: 2
-          }));
+          };
+          if (['DIGITDIFF', 'DIGITMATCH', 'DIGITOVER', 'DIGITUNDER'].includes(contractType)) {
+            proposalReq.barrier = '5';
+          }
+          ws.send(JSON.stringify(proposalReq));
         } else if (reqId === 2) {
+          // Proposal response
+          if (response.error) {
+            isFinished = true;
+            clearTimeout(timeout);
+            ws.close();
+            reject(new Error(`Proposal failed: ${response.error.message}`));
+            return;
+          }
+          const proposalId = response.proposal?.id;
+          const askPrice = response.proposal?.ask_price || amount;
+          // Step 3: Send buy request
+          ws.send(JSON.stringify({
+            buy: proposalId,
+            price: askPrice,
+            req_id: 3
+          }));
+        } else if (reqId === 3) {
           // Buy contract response
           isFinished = true;
           clearTimeout(timeout);

@@ -102,10 +102,19 @@ function SignalModal({ signal, wsToken, wsUrl, onClose }: { signal: Signal; wsTo
 
   const placeTrade = useCallback((ws: WebSocket, stake: number) => {
     const contractType = CONTRACT_TYPE[signal.type] || 'DIGITODD';
-    const payload: Record<string, unknown> = { buy: 1, price: stake, parameters: { amount: stake, basis: 'stake', contract_type: contractType, currency: 'USD', duration: 1, duration_unit: 't', symbol: signal.symbol } };
-    if (contractType === 'DIGITOVER' || contractType === 'DIGITUNDER') (payload.parameters as Record<string, unknown>).barrier = '5';
-    ws.send(JSON.stringify(payload));
-    setStatus(`Placing ${signal.type} on ${signal.market} - Stake: $${stake}`);
+    const req: Record<string, unknown> = {
+      proposal: 1,
+      amount: stake,
+      basis: 'stake',
+      contract_type: contractType,
+      currency: 'USD',
+      duration: 1,
+      duration_unit: 't',
+      underlying_symbol: signal.symbol
+    };
+    if (contractType === 'DIGITOVER' || contractType === 'DIGITUNDER') req.barrier = '5';
+    ws.send(JSON.stringify(req));
+    setStatus(`Requesting proposal for ${signal.type} on ${signal.market} ($${stake})`);
   }, [signal]);
 
   const startBot = useCallback(() => {
@@ -122,6 +131,12 @@ function SignalModal({ signal, wsToken, wsUrl, onClose }: { signal: Signal; wsTo
     ws.onmessage = (evt) => {
       const data = JSON.parse(evt.data);
       if (data.msg_type === 'authorize') { setStatus('Authorized. Placing trade...'); placeTrade(ws, currentStake.current); }
+      if (data.msg_type === 'proposal') {
+        if (data.error) { setStatus(`❌ ${data.error.message}`); stopBot(); return; }
+        if (data.proposal?.id) {
+          ws.send(JSON.stringify({ buy: data.proposal.id, price: data.proposal.ask_price }));
+        }
+      }
       if (data.msg_type === 'buy') {
         if (data.error) { setStatus(`❌ ${data.error.message}`); stopBot(); return; }
         if (data.buy?.profit !== undefined) {
