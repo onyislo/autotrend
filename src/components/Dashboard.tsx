@@ -405,32 +405,21 @@ export default function Dashboard() {
           <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>Live
         </span>
 
-        {/* Right: account switcher + balance */}
+        {/* Right: account status & balance indicator */}
         <div className="flex items-center gap-2 ml-auto">
-          {/* Demo/Real toggle */}
-          <button
-            onClick={() => setAccountMode(m => m === 'real' ? 'demo' : 'real')}
-            className={`flex items-center gap-1.5 border rounded-lg px-2 py-1 text-xs font-semibold transition-colors ${
-              isRealMode ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400'
-            }`}
-          >
-            <Repeat size={12} />
-            <span>{isRealMode ? 'Real Account' : 'Demo Account'}</span>
-          </button>
-          
-          <div className="text-right hidden sm:block">
-            {currentAccount ? (
-              <>
-                <p className="text-sm font-bold text-white">USD {fmt(currentAccount.balance)}</p>
-                <p className="text-xs text-gray-400 font-mono">{currentAccount.loginid ?? currentAccount.account_id ?? '—'}</p>
-              </>
-            ) : (
-              <>
-                <p className="text-xs font-bold text-red-400">{isRealMode ? 'No Real Account Found' : 'No Demo Account Found'}</p>
-                <p className="text-[10px] text-gray-400">Connect Deriv account</p>
-              </>
-            )}
-          </div>
+          {currentAccount ? (
+            <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-lg border border-white/10">
+              <span className={`w-2 h-2 rounded-full ${isRealMode ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+              <div className="text-right">
+                <p className="text-xs font-bold text-white leading-tight">USD {fmt(currentAccount.balance)}</p>
+                <p className="text-[10px] text-gray-300 font-mono leading-tight">{currentAccount.loginid ?? currentAccount.account_id ?? '—'}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 px-2.5 py-1 rounded-lg text-xs font-semibold">
+              <span>{isRealMode ? 'Real Mode' : 'Demo Mode'}</span>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -471,61 +460,56 @@ export default function Dashboard() {
               {/* Account details and toggle in mobile drawer */}
               <div className="p-4 border-b border-gray-100 bg-gray-50 flex-shrink-0">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Account</span>
+                  <span className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Trading Account</span>
+                </div>
+
+                {/* Premium Segmented Switcher */}
+                <div className="grid grid-cols-2 p-1 bg-gray-200/80 rounded-xl gap-1 mb-3">
                   <button
-                    onClick={() => setAccountMode(m => m === 'real' ? 'demo' : 'real')}
-                    className={`text-xs font-bold px-2.5 py-1 rounded-full border transition-colors ${
-                      isRealMode ? 'border-emerald-300 text-emerald-600 bg-emerald-50' : 'border-yellow-300 text-yellow-600 bg-yellow-50'
+                    onClick={() => setAccountMode('real')}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      isRealMode
+                        ? 'bg-emerald-500 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
-                    {isRealMode ? '● Real' : '● Demo'}
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    Real
+                  </button>
+                  <button
+                    onClick={() => setAccountMode('demo')}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      !isRealMode
+                        ? 'bg-amber-500 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    Demo
                   </button>
                 </div>
 
                 {currentAccount ? (
-                  <>
-                    <p className="font-bold text-gray-900 text-base">USD {fmt(currentAccount.balance)}</p>
-                    <p className="text-xs text-gray-400 truncate font-mono">{currentAccount.loginid ?? currentAccount.account_id ?? '—'}</p>
-                  </>
+                  <div className="p-3 bg-white border border-gray-200/80 rounded-xl shadow-xs">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        {isRealMode ? 'Real Balance' : 'Demo Balance'}
+                      </span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                        isRealMode ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+                      }`}>
+                        {currentAccount.currency || 'USD'}
+                      </span>
+                    </div>
+                    <p className="font-extrabold text-gray-900 text-base">USD {fmt(currentAccount.balance)}</p>
+                    <p className="text-xs text-gray-400 font-mono truncate">{currentAccount.loginid ?? currentAccount.account_id ?? '—'}</p>
+                  </div>
                 ) : (
-                  <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-center">
-                    <p className="text-xs font-bold text-red-600">{isRealMode ? 'No Real Account Found' : 'No Demo Account'}</p>
-                    <p className="text-[10px] text-gray-500">Switch to {isRealMode ? 'Demo' : 'Real'}</p>
+                  <div className="p-3 bg-amber-50 border border-amber-200/70 rounded-xl text-center">
+                    <p className="text-xs font-bold text-amber-700">{isRealMode ? 'No Real Account Found' : 'No Demo Account Found'}</p>
+                    <p className="text-[11px] text-amber-600/80 mt-0.5">Switch to {isRealMode ? 'Demo' : 'Real'} or reconnect Deriv</p>
                   </div>
                 )}
-
-                {/* Show both accounts list when available inside mobile drawer */}
-                <div className="mt-3 space-y-1">
-                  {realAccount ? (
-                    <button
-                      onClick={() => {
-                        setAccountMode('real');
-                      }}
-                      className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${
-                        isRealMode ? 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100' : 'text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      Real · USD {fmt(realAccount.balance)} ({realAccount.loginid ?? realAccount.account_id})
-                    </button>
-                  ) : (
-                    <div className="text-[11px] text-gray-400 px-2 py-1 italic">Real: No account found</div>
-                  )}
-
-                  {demoAccount ? (
-                    <button
-                      onClick={() => {
-                        setAccountMode('demo');
-                      }}
-                      className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${
-                        !isRealMode ? 'bg-yellow-50 text-yellow-700 font-semibold border border-yellow-100' : 'text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      Demo · USD {fmt(demoAccount.balance)} ({demoAccount.loginid ?? demoAccount.account_id})
-                    </button>
-                  ) : (
-                    <div className="text-[11px] text-gray-400 px-2 py-1 italic">Demo: No account found</div>
-                  )}
-                </div>
               </div>
 
               {/* Navigation list */}
@@ -581,47 +565,58 @@ export default function Dashboard() {
         {sidebarOpen && (
           <aside className="hidden md:flex flex-col w-52 bg-white border-r border-gray-200 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto">
             {/* Account switcher in sidebar */}
-            <div className="p-4 border-b border-gray-100">
+            <div className="p-4 border-b border-gray-100 bg-gray-50/50">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Account</span>
-                <button onClick={() => setAccountMode(m => m === 'real' ? 'demo' : 'real')}
-                  className={`text-xs font-bold px-2 py-0.5 rounded-full border transition-colors ${isRealMode ? 'border-emerald-300 text-emerald-600 bg-emerald-50' : 'border-yellow-300 text-yellow-600 bg-yellow-50'}`}>
-                  {isRealMode ? '● Real' : '● Demo'}
+                <span className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Trading Account</span>
+              </div>
+              
+              {/* Premium Segmented Switcher */}
+              <div className="grid grid-cols-2 p-1 bg-gray-200/80 rounded-xl gap-1 mb-3">
+                <button
+                  onClick={() => setAccountMode('real')}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    isRealMode
+                      ? 'bg-emerald-500 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  Real
+                </button>
+                <button
+                  onClick={() => setAccountMode('demo')}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    !isRealMode
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  Demo
                 </button>
               </div>
 
               {currentAccount ? (
-                <>
-                  <p className="font-bold text-gray-900 text-sm">USD {fmt(currentAccount.balance)}</p>
-                  <p className="text-xs text-gray-400 truncate font-mono">{currentAccount.loginid ?? currentAccount.account_id ?? '—'}</p>
-                </>
+                <div className="p-3 bg-white border border-gray-200/80 rounded-xl shadow-xs">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      {isRealMode ? 'Real Balance' : 'Demo Balance'}
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                      isRealMode ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+                    }`}>
+                      {currentAccount.currency || 'USD'}
+                    </span>
+                  </div>
+                  <p className="font-extrabold text-gray-900 text-base">USD {fmt(currentAccount.balance)}</p>
+                  <p className="text-xs text-gray-400 font-mono truncate">{currentAccount.loginid ?? currentAccount.account_id ?? '—'}</p>
+                </div>
               ) : (
-                <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-center">
-                  <p className="text-xs font-bold text-red-600">{isRealMode ? 'No Real Account Found' : 'No Demo Account'}</p>
-                  <p className="text-[10px] text-gray-500">Switch to {isRealMode ? 'Demo' : 'Real'}</p>
+                <div className="p-3 bg-amber-50 border border-amber-200/70 rounded-xl text-center">
+                  <p className="text-xs font-bold text-amber-700">{isRealMode ? 'No Real Account' : 'No Demo Account'}</p>
+                  <p className="text-[11px] text-amber-600/80 mt-0.5">Switch mode or reconnect</p>
                 </div>
               )}
-
-              {/* Show both accounts list when available */}
-              <div className="mt-3 space-y-1">
-                {realAccount ? (
-                  <button onClick={() => setAccountMode('real')}
-                    className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${isRealMode ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}>
-                    Real · USD {fmt(realAccount.balance)} ({realAccount.loginid ?? realAccount.account_id})
-                  </button>
-                ) : (
-                  <div className="text-[11px] text-gray-400 px-2 py-1 italic">Real: No account found</div>
-                )}
-
-                {demoAccount ? (
-                  <button onClick={() => setAccountMode('demo')}
-                    className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors {!isRealMode ? 'bg-yellow-50 text-yellow-700 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}>
-                    Demo · USD {fmt(demoAccount.balance)} ({demoAccount.loginid ?? demoAccount.account_id})
-                  </button>
-                ) : (
-                  <div className="text-[11px] text-gray-400 px-2 py-1 italic">Demo: No account found</div>
-                )}
-              </div>
             </div>
 
             {/* Navigation */}
