@@ -54,8 +54,8 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
 ];
 
 const BADGE_COLORS: Record<string, string> = {
-  ODD: 'bg-orange-500', EVEN: 'bg-blue-500', OVER: 'bg-green-600',
-  UNDER: 'bg-purple-500', DIFFERS: 'bg-red-500', MATCHES: 'bg-yellow-500',
+  ODD: 'bg-orange-500', EVEN: 'bg-blue-500', OVER: 'bg-emerald-600',
+  UNDER: 'bg-purple-500', DIFFERS: 'bg-emerald-600', MATCHES: 'bg-amber-500',
 };
 
 const CONTRACT_TYPE: Record<string, string> = {
@@ -145,23 +145,23 @@ function SignalModal({ signal, wsToken, wsUrl, onClose }: { signal: Signal; wsTo
           <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={20} /></button>
         </div>
         <div className="p-5">
-          <p className="text-sm text-gray-400 mb-4">Selected: <span className="text-red-400 font-medium">{signal.market}</span> - {signal.type} (Rank #{signal.id} | Confidence: {signal.confidence}%)</p>
+          <p className="text-sm text-gray-400 mb-4">Selected: <span className="text-emerald-400 font-medium">{signal.market}</span> - {signal.type} (Rank #{signal.id} | Confidence: {signal.confidence}%)</p>
           <div className="grid grid-cols-2 gap-4 mb-4">
             {[{ label: 'STAKE', key: 'stake' }, { label: 'TAKE PROFIT (WINS)', key: 'takeProfit' }, { label: 'STOP LOSS ($)', key: 'stopLoss' }, { label: 'CONSECUTIVE LOSSES', key: 'consecutiveLosses' }].map(({ label, key }) => (
               <div key={key} className="bg-gray-800 rounded-xl p-3 border border-gray-600">
-                <label className="text-xs text-red-400 font-bold uppercase tracking-wider block mb-1">{label}</label>
+                <label className="text-xs text-emerald-400 font-bold uppercase tracking-wider block mb-1">{label}</label>
                 <input type="number" step="0.1" min="0" value={settings[key as keyof TradeSettings]} onChange={e => setSettings(s => ({ ...s, [key]: e.target.value }))} disabled={running} className="bg-transparent text-white text-lg font-semibold w-full outline-none" />
               </div>
             ))}
           </div>
           <div className="bg-gray-800 rounded-xl p-3 border border-gray-600 mb-4">
-            <label className="text-xs text-red-400 font-bold uppercase tracking-wider block mb-1">MARTINGALE MULTIPLIER</label>
+            <label className="text-xs text-emerald-400 font-bold uppercase tracking-wider block mb-1">MARTINGALE MULTIPLIER</label>
             <input type="number" step="0.1" min="1" value={settings.martingale} onChange={e => setSettings(s => ({ ...s, martingale: e.target.value }))} disabled={running} className="bg-transparent text-white text-lg font-semibold w-full outline-none" />
           </div>
-          {status && <div className="mb-4 p-3 bg-gray-800 rounded-lg text-sm text-gray-300 border border-gray-600"><p>{status}</p>{(wins > 0 || losses > 0) && <p className="mt-1 text-xs">Wins: <span className="text-green-400">{wins}</span> | Losses: <span className="text-red-400">{losses}</span></p>}</div>}
+          {status && <div className="mb-4 p-3 bg-gray-800 rounded-lg text-sm text-gray-300 border border-gray-600"><p>{status}</p>{(wins > 0 || losses > 0) && <p className="mt-1 text-xs">Wins: <span className="text-emerald-400">{wins}</span> | Losses: <span className="text-red-400">{losses}</span></p>}</div>}
           <div className="flex gap-3">
             <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-gray-700 text-white font-semibold hover:bg-gray-600 transition-colors">Cancel</button>
-            {running ? <button onClick={stopBot} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700">Stop Bot</button> : <button onClick={startBot} className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600">Save and run</button>}
+            {running ? <button onClick={stopBot} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700">Stop Bot</button> : <button onClick={startBot} className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600">Save and run</button>}
           </div>
         </div>
       </div>
@@ -175,7 +175,7 @@ function SignalCard({ signal, onLoad }: { signal: Signal; onLoad: (s: Signal) =>
     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center">#{signal.id}</span>
+          <span className="w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">#{signal.id}</span>
           <p className="font-bold text-gray-900 text-sm">{signal.market}</p>
         </div>
         <span className={`${signal.badgeColor} text-white text-xs font-bold px-2 py-0.5 rounded`}>{signal.badge}</span>
@@ -185,7 +185,7 @@ function SignalCard({ signal, onLoad }: { signal: Signal; onLoad: (s: Signal) =>
           <span className="text-xs text-gray-500 uppercase font-medium">Confidence</span>
           <span className="text-sm font-bold text-gray-900">{signal.confidence}%</span>
         </div>
-        <div className="w-full bg-gray-100 rounded-full h-1.5"><div className="bg-red-500 h-1.5 rounded-full" style={{ width: `${signal.confidence}%` }} /></div>
+        <div className="w-full bg-gray-100 rounded-full h-1.5"><div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${signal.confidence}%` }} /></div>
       </div>
       <div className="grid grid-cols-3 gap-2 mb-4 text-center">
         {[{ label: signal.type, val: `${signal.confidence}%` }, { label: 'Most', val: signal.most }, { label: 'Least', val: signal.least }].map(({ label, val }) => (
@@ -193,7 +193,7 @@ function SignalCard({ signal, onLoad }: { signal: Signal; onLoad: (s: Signal) =>
         ))}
       </div>
       <details className="mb-3"><summary className="text-xs text-emerald-600 cursor-pointer font-medium">Show details</summary><div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs text-gray-600"><p>Signal from last 500 ticks analysis</p></div></details>
-      <button onClick={() => onLoad(signal)} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-lg text-sm transition-colors">▶ Load {signal.badge} signal</button>
+      <button onClick={() => onLoad(signal)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-lg text-sm transition-colors">▶ Load {signal.badge} signal</button>
     </div>
   );
 }
@@ -390,17 +390,7 @@ export default function Dashboard() {
           <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>Live
         </span>
 
-        {/* Desktop tabs */}
-        <div className="hidden md:flex items-center gap-0.5 overflow-x-auto ml-2 flex-1">
-          {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${activeTab === tab.id ? 'bg-red-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Right: account switcher + balance + logout */}
+        {/* Right: account switcher + balance */}
         <div className="flex items-center gap-2 ml-auto">
           {/* Demo/Real toggle */}
           <button
@@ -426,10 +416,6 @@ export default function Dashboard() {
               </>
             )}
           </div>
-
-          <button onClick={handleLogout} className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-sm transition-colors">
-            <LogOut size={14} /><span className="hidden sm:inline">Logout</span>
-          </button>
         </div>
       </nav>
 
@@ -567,7 +553,7 @@ export default function Dashboard() {
         <div className="flex gap-6 animate-ticker whitespace-nowrap">
           {[...MARKETS_TICKER, ...MARKETS_TICKER].map((m, i) => (
             <span key={i} className="flex items-center gap-1.5 text-xs text-gray-500">
-              <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>{m}
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>{m}
             </span>
           ))}
         </div>
@@ -651,7 +637,7 @@ export default function Dashboard() {
             <div className="space-y-6 max-w-7xl mx-auto">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
                   <h2 className="font-bold text-gray-900 uppercase text-sm tracking-wider">Live Trading Signals</h2>
                 </div>
                 <div className="flex items-center gap-3">

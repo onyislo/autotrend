@@ -60,7 +60,10 @@ export class DerivAPI {
       
       this.callbacks.set(reqId, (response) => {
         if (response.error) {
-          reject(new Error(response.error.message))
+          const err: any = new Error(response.error.message)
+          err.code = response.error.code
+          err.details = response.error.details
+          reject(err)
         } else {
           resolve(response)
         }
@@ -100,25 +103,26 @@ export class DerivAPI {
     return response;
   }
 
-  // Buy a contract
+  // Buy a contract (Proposal -> Buy)
   async buyContract(contractType: string, symbol: string, amount: number, duration: number, barrier?: string): Promise<any> {
-    const parameters: any = {
+    const req: any = {
+      proposal: 1,
       contract_type: contractType,
       symbol: symbol,
       amount: amount,
       currency: this.currency,
       duration: duration,
-      duration_unit: 't', // ticks
+      duration_unit: 't',
       basis: 'stake'
     };
     if (barrier || ['DIGITDIFF', 'DIGITMATCH', 'DIGITOVER', 'DIGITUNDER'].includes(contractType)) {
-      parameters.barrier = barrier || '5';
+      req.barrier = barrier || '5';
     }
+    const prop = await this.sendRequest(req);
     return this.sendRequest({
-      buy: 1,
-      price: amount,
-      parameters
-    })
+      buy: prop.proposal.id,
+      price: prop.proposal.ask_price
+    });
   }
 
   // Get details of an active or completed contract
