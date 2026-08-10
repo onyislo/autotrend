@@ -135,6 +135,66 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
       }
     } catch {}
 
+    const defaultSystemBots: Bot[] = [
+      {
+        id: 'default-autotrendx-v50',
+        name: 'AUTOTRENDX BOT (V50 Digits)',
+        description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses.",
+        is_public: true,
+        strategy: {
+          symbol: 'R_50',
+          contractType: 'DIGITDIFF',
+          amount: 1,
+          duration: 1,
+          martingale: true,
+          martingaleMultiplier: 2,
+          maxMartingaleSteps: 4,
+          stopLoss: 20,
+          takeProfit: 40,
+        }
+      },
+      {
+        id: 'default-v75-scalper',
+        name: 'V75 Martingale Scalper',
+        description: 'High-frequency Rise strategy on Volatility 75 with automated Martingale stake recovery.',
+        is_public: true,
+        strategy: {
+          symbol: 'R_75',
+          contractType: 'CALL',
+          amount: 1,
+          duration: 1,
+          martingale: true,
+          martingaleMultiplier: 2,
+          maxMartingaleSteps: 3,
+          stopLoss: 25,
+          takeProfit: 50,
+        }
+      },
+      {
+        id: 'default-digit-differ',
+        name: 'Digit Differ Pro (V100)',
+        description: 'Calculates high-probability digit differ contracts on Volatility 100.',
+        is_public: true,
+        strategy: {
+          symbol: 'R_100',
+          contractType: 'DIGITDIFF',
+          amount: 1,
+          duration: 1,
+          martingale: true,
+          martingaleMultiplier: 2,
+          maxMartingaleSteps: 5,
+          stopLoss: 30,
+          takeProfit: 60,
+        }
+      }
+    ];
+
+    defaultSystemBots.forEach(db => {
+      if (!list.some(b => b.id === db.id || b.name === db.name)) {
+        list.push(db);
+      }
+    });
+
     try {
       const { data, error } = await supabase
         .from('trading_bots')
@@ -142,7 +202,7 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
         .eq('is_public', true);
       
       if (!error && data && data.length > 0) {
-        list.push(...data);
+        list.push(...data.filter(d => !list.some(b => b.id === d.id)));
       }
     } catch {
       // Ignore DB fallback error

@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LogOut, RefreshCw, TrendingUp, Bot, BarChart2, Zap,
+  LogOut, RefreshCw, TrendingUp, BarChart2, Zap,
   ChevronRight, Activity, Menu, X, LayoutDashboard,
   Copy
 } from 'lucide-react';
-import BotBuilder from './BotBuilder';
+import AutoBotsPanel from './AutoBotsPanel';
 import ChartsSection from './ChartsSection';
 import { getUserData } from '../lib/finalAuth';
 
@@ -23,7 +23,7 @@ function Logo({ size = 28 }: { size?: number }) {
   );
 }
 
-type TabId = 'dashboard' | 'botbuilder' | 'freebots' | 'dtrader' | 'quickbot' | 'autotrade' | 'signalai' | 'copytrader' | 'charts';
+type TabId = 'dashboard' | 'freebots' | 'dtrader' | 'quickbot' | 'autotrade' | 'signalai' | 'copytrader' | 'charts';
 
 interface Signal {
   id: number; market: string; symbol: string; type: string;
@@ -43,7 +43,6 @@ interface SessionData {
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
-  { id: 'botbuilder', label: 'Bot Builder', icon: <Bot size={16} /> },
   { id: 'freebots', label: 'Free Bots', icon: <Zap size={16} /> },
   { id: 'dtrader', label: 'D-Trader', icon: <TrendingUp size={16} /> },
   { id: 'quickbot', label: 'Quick Bot', icon: <Activity size={16} /> },
@@ -214,89 +213,16 @@ function SignalCard({ signal, onLoad }: { signal: Signal; onLoad: (s: Signal) =>
 }
 
 // ── Free Bots ─────────────────────────────────────────────────────────────────
-const AUTOTRENDX_BOT_XML = `<?xml version="1.0" encoding="UTF-8"?><xml xmlns="https://developers.google.com/blockly/xml"><variables><variable type="" id="dalembert:resultIsWin">dalembert:resultIsWin</variable><variable type="" id="dalembert:profit">dalembert:profit</variable><variable type="" id="stake">stake</variable><variable type="" id="trader">trader</variable><variable type="" id="dalembert:totalProfit">dalembert:totalProfit</variable><variable type="" id="dalembert:tradeAgain">dalembert:tradeAgain</variable><variable type="" id="win">win</variable><variable type="" id="dalembert:expectedProfit">dalembert:expectedProfit</variable><variable type="" id="dalembert:size">dalembert:size</variable><variable type="" id="dalembert:amount">dalembert:amount</variable><variable type="" id="dalembert:profitUnits">dalembert:profitUnits</variable><variable type="" id="martingale">martingale</variable><variable type="" id="take profit">take profit</variable><variable type="" id="dalembert:maximumLoss">dalembert:maximumLoss</variable></variables><block type="trade_definition" deletable="false" x="32" y="32"><mutation has_initialization="true"></mutation><field name="MARKET_LIST">synthetic_index</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">R_50</field><field name="TRADETYPE_LIST">digits</field><field name="TYPE_LIST">matchesdiffers</field><field name="DURATION_LIST">t</field><field name="DURATION_AMOUNT">60</field><field name="CURRENCY_LIST">USD</field><field name="AMOUNT_TYPE_LIST">stake</field><field name="AMOUNT">1</field><statement name="INITIALIZATION"><block type="procedures_callnoreturn"><mutation name="D&apos;Alembert Trade Amount"><arg name="dalembert:expectedProfit"></arg><arg name="dalembert:maximumLoss"></arg><arg name="dalembert:amount"></arg></mutation><value name="ARG0"><block type="math_number"><field name="NUM">10</field></block></value><value name="ARG1"><block type="math_number"><field name="NUM">80</field></block></value><value name="ARG2"><block type="math_number"><field name="NUM">1</field></block></value></block></statement><statement name="PURCHASE"><block type="purchase"><field name="PURCHASE_LIST">DIGITDIFF</field></block></statement><statement name="AFTER_PURCHASE"><block type="procedures_callnoreturn"><mutation name="D&apos;Alembert Trade Again After Purchase"><arg name="dalembert:profit"></arg><arg name="dalembert:tradeAgain"></arg></mutation><value name="ARG0"><block type="read_price"><field name="READ_PRICE_LIST">profit</field></block></value><value name="ARG1"><block type="logic_boolean"><field name="BOOL">FALSE</field></block></value></block></statement></block></xml>`;
 
-const FREE_BOTS = [
-  { id: 'autotrendx', name: 'AUTOTRENDX BOT', winRate: 99, description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses.", market: 'Volatility 50 Index', symbol: 'R_50', type: "D'Alembert / Digits", xml: AUTOTRENDX_BOT_XML },
-];
-
-function LoadBotModal({ bot, onClose, onGoToBotBuilder }: { bot: typeof FREE_BOTS[0]; onClose: () => void; onGoToBotBuilder: () => void }) {
-  const [stake, setStake] = useState('1');
-  const [takeProfit, setTakeProfit] = useState('10');
-  const [stopLoss, setStopLoss] = useState('5');
-
-  const handleLoad = () => {
-    try {
-      localStorage.setItem('autotrendx_loaded_xml', bot.xml);
-      localStorage.setItem('autotrendx_loaded_bot_name', bot.name);
-      localStorage.setItem('autotrendx_loaded_symbol', bot.symbol);
-      localStorage.setItem('dbot_workspace', bot.xml);
-    } catch {}
-    onGoToBotBuilder();
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-      <div className="bg-gray-900 rounded-2xl w-full max-w-md border border-gray-700 shadow-2xl">
-        <div className="flex items-center justify-between p-5 border-b border-gray-700">
-          <div><h2 className="text-white font-bold text-lg">{bot.name}</h2><p className="text-gray-400 text-xs mt-0.5">{bot.market} · {bot.type}</p></div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={20} /></button>
-        </div>
-        <div className="p-5 space-y-4">
-          <p className="text-gray-400 text-sm">{bot.description}</p>
-          <div className="grid grid-cols-3 gap-3">
-            {[{ label: 'STAKE ($)', val: stake, set: setStake }, { label: 'TAKE PROFIT ($)', val: takeProfit, set: setTakeProfit }, { label: 'STOP LOSS ($)', val: stopLoss, set: setStopLoss }].map(({ label, val, set }) => (
-              <div key={label} className="bg-gray-800 rounded-xl p-3 border border-gray-600">
-                <label className="text-xs text-emerald-400 font-bold uppercase tracking-wider block mb-1">{label}</label>
-                <input type="number" step="0.1" min="0" value={val} onChange={e => set(e.target.value)} className="bg-transparent text-white text-lg font-semibold w-full outline-none" />
-              </div>
-            ))}
-          </div>
-          <div className="p-3 bg-blue-900/40 border border-blue-500/30 rounded-lg text-blue-300 text-sm">
-            ℹ️ Clicking Open Bot Builder loads strategy parameters directly into Bot Builder for live execution.
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-gray-700 text-white font-semibold">Cancel</button>
-            <button onClick={handleLoad} className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold">Open Bot Builder</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FreeBotsPanel({ onGoToBotBuilder }: { onGoToBotBuilder: () => void }) {
-  const [selectedBot, setSelectedBot] = useState<typeof FREE_BOTS[0] | null>(null);
-
+function FreeBotsPanel({ wsToken, wsUrl, adminEmail }: { wsToken?: string | null; wsUrl?: string | null; adminEmail?: string }) {
   return (
     <div className="space-y-6">
-      {selectedBot && <LoadBotModal bot={selectedBot} onClose={() => setSelectedBot(null)} onGoToBotBuilder={onGoToBotBuilder} />}
-
-      <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-        <h2 className="font-bold text-gray-900 text-lg">Free Bots</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Load pre-built strategies into Bot Builder for live execution</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {FREE_BOTS.map(bot => (
-          <div key={bot.id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-3">
-              <h3 className="font-bold text-gray-900 text-base truncate max-w-[180px]">{bot.name}</h3>
-              <div className="flex flex-col items-center bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1">
-                <span className="text-emerald-600 font-bold text-sm">{bot.winRate}%</span>
-                <span className="text-emerald-500 text-xs font-semibold">WIN</span>
-              </div>
-            </div>
-            <div className="mb-3 py-2 px-3 bg-gray-50 rounded-lg flex items-center justify-between text-xs">
-              <span className="text-gray-500 font-semibold uppercase tracking-wider">Symbol</span>
-              <span className="font-bold text-gray-900">{bot.symbol}</span>
-            </div>
-            <p className="text-xs text-gray-500 mb-4 line-clamp-2">{bot.description}</p>
-            <button onClick={() => setSelectedBot(bot)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm">Load bot</button>
-          </div>
-        ))}
-      </div>
+      <AutoBotsPanel
+        wsToken={wsToken ?? null}
+        wsUrl={wsUrl ?? null}
+        userEmail={adminEmail ?? null}
+        userId={null}
+      />
     </div>
   );
 }
@@ -382,9 +308,8 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
   const fmt = (v?: number | string) => v !== undefined ? Number(v).toFixed(2) : '0.00';
 
   const TOOL_CARDS = [
-    { id: 'botbuilder' as TabId, icon: <Bot size={24} />, title: 'Bot Builder', desc: 'Build and run block strategies' },
+    { id: 'freebots' as TabId, icon: <Zap size={24} />, title: 'Free Bots', desc: 'Load & run automated strategies' },
     { id: 'dtrader' as TabId, icon: <TrendingUp size={24} />, title: 'D-Trader', desc: 'Manual options & accumulators' },
-    { id: 'freebots' as TabId, icon: <Zap size={24} />, title: 'Free Bots', desc: 'Load ready XML strategies' },
     { id: 'charts' as TabId, icon: <BarChart2 size={24} />, title: 'Charts', desc: 'Live Deriv SmartCharts' },
     { id: 'autotrade' as TabId, icon: <Activity size={24} />, title: 'Auto Trade', desc: 'Automated trading engine' },
   ];
@@ -687,32 +612,8 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
             </div>
           )}
 
-          {activeTab === 'freebots' && <FreeBotsPanel onGoToBotBuilder={() => setActiveTab('botbuilder')} />}
-          {activeTab === 'signalai' && (
-            <div className="space-y-6 max-w-7xl mx-auto">
-              <div className="flex items-center justify-between">
-                <h2 className="font-bold text-gray-900 text-lg">Signal AI</h2>
-                <button onClick={() => { setSignals(generateSignals()); setCountdown(20); }} className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium"><RefreshCw size={14} />Generate</button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {signals.map(signal => <SignalCard key={signal.id} signal={signal} onLoad={setSelectedSignal} />)}
-              </div>
-            </div>
-          )}
-
-          {/* D-Trader */}
-          {activeTab === 'dtrader' && (
-            <div className="max-w-7xl mx-auto space-y-4">
-              <h2 className="font-bold text-gray-900 text-lg">D-Trader</h2>
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
-                <iframe src="https://app.deriv.com/dtrader" className="w-full h-full border-0" title="D-Trader" allow="clipboard-write" />
-              </div>
-            </div>
-          )}
-
-          {/* BotBuilder — 100% native bot builder panel */}
-          {activeTab === 'botbuilder' && (
-            <BotBuilder wsToken={session?.wsToken} wsUrl={session?.wsUrl} userEmail={adminEmail || null} onGoToFreeBots={() => setActiveTab('freebots')} />
+          {activeTab === 'freebots' && (
+            <FreeBotsPanel wsToken={session?.wsToken} wsUrl={session?.wsUrl} adminEmail={adminEmail} />
           )}
 
           {/* Charts — 100% native canvas live chart */}
@@ -722,7 +623,7 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
             <div className="flex flex-col items-center justify-center py-24 text-center max-w-7xl mx-auto">
               <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4"><Zap size={32} className="text-emerald-500" /></div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">{TABS.find(t => t.id === activeTab)?.label}</h2>
-              <p className="text-gray-500 max-w-sm font-medium">Auto-trading feature ready for execution via Bot Builder tab.</p>
+              <p className="text-gray-500 max-w-sm font-medium">Auto-trading feature ready for execution via Free Bots tab.</p>
             </div>
           )}
         </main>
