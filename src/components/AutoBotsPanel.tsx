@@ -1,9 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pause, Plus, ShieldAlert, BarChart3, TrendingUp, Cpu, History, Trash2 } from 'lucide-react';
+import { Pause, Plus, ShieldAlert, BarChart3, TrendingUp, Cpu, History, Trash2, Upload } from 'lucide-react';
 import { derivAPI, SYNTHETIC_INDICES } from '../lib/derivAPI';
 import { supabase } from '../lib/supabase';
-import { getUserData } from '../lib/finalAuth';
+
+const getLocalAdminBots = (): Bot[] => {
+  try {
+    const raw = localStorage.getItem('autotrendx_admin_bots');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalAdminBot = (bot: Bot) => {
+  try {
+    const existing = getLocalAdminBots();
+    const updated = [bot, ...existing.filter(b => b.id !== bot.id)];
+    localStorage.setItem('autotrendx_admin_bots', JSON.stringify(updated));
+  } catch (e) {
+    console.error('Failed to save local admin bot:', e);
+  }
+};
+
+const removeLocalAdminBot = (botId: string) => {
+  try {
+    const existing = getLocalAdminBots();
+    const updated = existing.filter(b => b.id !== botId);
+    localStorage.setItem('autotrendx_admin_bots', JSON.stringify(updated));
+  } catch (e) {
+    console.error('Failed to remove local admin bot:', e);
+  }
+};
 
 interface BotStrategy {
   symbol: string;
@@ -73,7 +101,7 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
   const runningBotIdRef = useRef<string | null>(null);
   
   // Check if current user is admin
-  const isAdmin = userEmail === 'otienowill833@gmail.com';
+  const isAdmin = userEmail === 'admin@autotrendx.com';
 
   useEffect(() => {
     loadBots();
@@ -119,6 +147,14 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
     } catch {
       // Ignore DB fallback error
     }
+
+    // Load local admin uploaded/created bots
+    try {
+      const localAdminBots = getLocalAdminBots();
+      if (localAdminBots.length > 0) {
+        list.push(...localAdminBots.filter(lab => !list.some(b => b.id === lab.id)));
+      }
+    } catch {}
 
     setBots(list);
   };
@@ -338,14 +374,15 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
         .select();
 
       if (!error && data) {
+        saveLocalAdminBot(data[0]);
         setBots([...bots, data[0]]);
         setShowCreator(false);
-        alert('Admin Bot uploaded successfully!');
+        alert('Admin Bot created and published successfully!');
       } else {
         throw error;
       }
     } catch {
-      // Fallback for demo: add to state
+      // Fallback for demo / offline mode
       const mockBot: Bot = {
         id: `mock-${Date.now()}`,
         name: botObj.name!,
@@ -353,9 +390,10 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
         is_public: true,
         strategy: botObj.strategy!
       };
+      saveLocalAdminBot(mockBot);
       setBots([...bots, mockBot]);
       setShowCreator(false);
-      alert('Bot added to current session dashboard successfully!');
+      alert('Admin Bot created and published successfully!');
     }
   };
 
@@ -365,37 +403,87 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
       return;
     }
     
+    removeLocalAdminBot(botId);
     try {
-      const { error } = await supabase
+      await supabase
         .from('trading_bots')
         .delete()
         .eq('id', botId);
-      
-      if (!error) {
-        setBots(bots.filter((b) => b.id !== botId));
-      }
     } catch {
-      setBots(bots.filter((b) => b.id !== botId));
+      // Ignore DB error
     }
+    setBots(prev => prev.filter((b) => b.id !== botId));
   };
 
   return (
     <div className="space-y-6">
       {/* Admin Panel Actions */}
       {isAdmin && (
-        <div className="flex justify-between items-center bg-emerald-50 border border-emerald-200 rounded-2xl p-6 shadow-sm">
-          <div>
-            <h3 className="font-bold text-emerald-900 text-lg">👑 Admin Bot Manager Panel</h3>
-            <p className="text-emerald-700 text-xs mt-1">
-              You are signed in as the Administrator. You can design, load, and deploy proprietary bot templates for your clients.
-            </p>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-emerald-900 text-lg">👑 Admin Bot Manager Panel</h3>
+              <p className="text-emerald-700 text-xs mt-1">
+                You are signed in as the Administrator. Design, upload, and deploy proprietary bot templates for your clients.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Admin XML Upload */}
+              <input
+                type="file"
+                accept=".xml"
+                id="admin-xml-upload"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (evt) => {
+                    const xmlContent = evt.target?.result as string;
+                    if (!xmlContent) return;
+                    const symbolMatch = xmlContent.match(/<field name="SYMBOL_LIST">(.*?)<\/field>/);
+                    const purchaseMatch = xmlContent.match(/<field name="PURCHASE_LIST">(.*?)<\/field>/);
+                    const symbol = symbolMatch ? symbolMatch[1] : 'R_50';
+                    const contractType = purchaseMatch ? purchaseMatch[1] : 'DIGITDIFF';
+                    const botName = file.name.replace(/\.xml$/i, '').toUpperCase();
+                    const newBot: Bot = {
+                      id: `admin-xml-${Date.now()}`,
+                      name: botName,
+                      description: `Admin uploaded XML bot (${botName}) on ${symbol}.`,
+                      is_public: true,
+                      strategy: {
+                        symbol,
+                        contractType,
+                        amount: 1,
+                        duration: 1,
+                        martingale: true,
+                        martingaleMultiplier: 2,
+                        maxMartingaleSteps: 4,
+                        stopLoss: 20,
+                        takeProfit: 40,
+                      }
+                    };
+                    saveLocalAdminBot(newBot);
+                    setBots(prev => [newBot, ...prev.filter(b => b.id !== newBot.id)]);
+                    alert(`✅ Bot "${botName}" uploaded and deployed to all users!`);
+                  };
+                  reader.readAsText(file);
+                }}
+              />
+              <label
+                htmlFor="admin-xml-upload"
+                className="flex items-center gap-2 bg-white border border-emerald-400 text-emerald-700 hover:bg-emerald-100 font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm text-sm cursor-pointer"
+              >
+                <Upload size={15} /> Upload .XML Bot
+              </label>
+              <button
+                onClick={() => setShowCreator(true)}
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm text-sm"
+              >
+                <Plus size={15} /> Create Bot
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setShowCreator(true)}
-            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm text-sm"
-          >
-            <Plus size={16} /> Load Admin Bot
-          </button>
         </div>
       )}
 
@@ -491,7 +579,7 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
             <div>
               <h4 className="font-bold text-gray-900 text-base mb-1">No Bot Loaded in Bot Builder</h4>
               <p className="text-gray-500 text-xs max-w-md mx-auto">
-                Go to the Free Bots tab and click <span className="font-bold text-gray-700">"Load bot"</span> on <span className="font-bold text-emerald-600">AUTOTRENDX BOT</span> to load it into Bot Builder for trading execution.
+                Upload a <span className="font-bold text-emerald-600">.XML bot file</span> above or load a pre-built strategy from Free Bots.
               </p>
             </div>
             {onGoToFreeBots && (

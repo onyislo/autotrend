@@ -10,10 +10,11 @@ import AutoBotsPanel from './AutoBotsPanel';
 interface Props {
   wsToken?: string | null;
   wsUrl?: string | null;
+  userEmail?: string | null;
   onGoToFreeBots?: () => void;
 }
 
-export default function BotBuilder({ wsToken, wsUrl, onGoToFreeBots }: Props) {
+export default function BotBuilder({ wsToken, wsUrl, userEmail, onGoToFreeBots }: Props) {
   // Pass wsToken or fallback to empty string
   return (
     <div className="flex flex-col w-full h-full bg-gray-50 overflow-hidden">
@@ -21,7 +22,7 @@ export default function BotBuilder({ wsToken, wsUrl, onGoToFreeBots }: Props) {
         <AutoBotsPanel
           wsToken={wsToken ?? null}
           wsUrl={wsUrl ?? null}
-          userEmail={null}
+          userEmail={userEmail ?? null}
           userId={null}
           onGoToFreeBots={onGoToFreeBots}
         />

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import App from '../App';
 import Dashboard from './Dashboard';
+import AdminRoute from './AdminRoute';
 import { handleCallback, isLoggedIn } from '../lib/finalAuth';
 
 export default function Router() {
   const [showDashboard, setShowDashboard] = useState(false);
+  const [isAdminRoute, setIsAdminRoute] = useState(() => window.location.pathname === '/5678-hekaya');
   const [loading, setLoading] = useState(() => {
     const path = window.location.pathname;
     const params = new URLSearchParams(window.location.search);
@@ -17,6 +19,12 @@ export default function Router() {
     const params = new URLSearchParams(window.location.search);
 
     console.log('Router: path =', path);
+
+    if (path === '/5678-hekaya') {
+      setIsAdminRoute(true);
+      setLoading(false);
+      return;
+    }
 
     const isCallbackPath = path === '/auth/callback';
     const hasCode = params.has('code');
@@ -62,6 +70,10 @@ export default function Router() {
 
     setLoading(false);
   }, []);
+
+  if (isAdminRoute) {
+    return <AdminRoute />;
+  }
 
   if (loading) {
     return (

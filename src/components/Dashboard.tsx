@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LogOut, RefreshCw, TrendingUp, Bot, BarChart2, Zap,
   ChevronRight, Activity, Menu, X, LayoutDashboard,
-  Copy, Repeat
+  Copy
 } from 'lucide-react';
 import BotBuilder from './BotBuilder';
 import ChartsSection from './ChartsSection';
@@ -268,25 +268,32 @@ function LoadBotModal({ bot, onClose, onGoToBotBuilder }: { bot: typeof FREE_BOT
 
 function FreeBotsPanel({ onGoToBotBuilder }: { onGoToBotBuilder: () => void }) {
   const [selectedBot, setSelectedBot] = useState<typeof FREE_BOTS[0] | null>(null);
+
   return (
     <div className="space-y-6">
       {selectedBot && <LoadBotModal bot={selectedBot} onClose={() => setSelectedBot(null)} onGoToBotBuilder={onGoToBotBuilder} />}
-      <h2 className="font-bold text-gray-900 text-lg">Free Bots</h2>
+
+      <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+        <h2 className="font-bold text-gray-900 text-lg">Free Bots</h2>
+        <p className="text-xs text-gray-500 mt-0.5">Load pre-built strategies into Bot Builder for live execution</p>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {FREE_BOTS.map(bot => (
           <div key={bot.id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between mb-3">
-              <h3 className="font-bold text-gray-900 text-base">{bot.name}</h3>
+              <h3 className="font-bold text-gray-900 text-base truncate max-w-[180px]">{bot.name}</h3>
               <div className="flex flex-col items-center bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1">
                 <span className="text-emerald-600 font-bold text-sm">{bot.winRate}%</span>
                 <span className="text-emerald-500 text-xs font-semibold">WIN</span>
               </div>
             </div>
-            <div className="mb-4 py-2 px-3 bg-gray-50 rounded-lg flex items-center justify-between">
-              <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Win Rate</span>
-              <span className="font-bold text-gray-900">{bot.winRate}.0%</span>
+            <div className="mb-3 py-2 px-3 bg-gray-50 rounded-lg flex items-center justify-between text-xs">
+              <span className="text-gray-500 font-semibold uppercase tracking-wider">Symbol</span>
+              <span className="font-bold text-gray-900">{bot.symbol}</span>
             </div>
-            <button onClick={() => setSelectedBot(bot)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-lg transition-colors">Load bot</button>
+            <p className="text-xs text-gray-500 mb-4 line-clamp-2">{bot.description}</p>
+            <button onClick={() => setSelectedBot(bot)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm">Load bot</button>
           </div>
         ))}
       </div>
@@ -294,8 +301,12 @@ function FreeBotsPanel({ onGoToBotBuilder }: { onGoToBotBuilder: () => void }) {
   );
 }
 
+interface DashboardProps {
+  adminEmail?: string;
+}
+
 // ── Main Dashboard ────────────────────────────────────────────────────────────
-export default function Dashboard() {
+export default function Dashboard({ adminEmail }: DashboardProps = {}) {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [signals, setSignals] = useState<Signal[]>(generateSignals());
   const [countdown, setCountdown] = useState(20);
@@ -701,7 +712,7 @@ export default function Dashboard() {
 
           {/* BotBuilder — 100% native bot builder panel */}
           {activeTab === 'botbuilder' && (
-            <BotBuilder wsToken={session?.wsToken} wsUrl={session?.wsUrl} onGoToFreeBots={() => setActiveTab('freebots')} />
+            <BotBuilder wsToken={session?.wsToken} wsUrl={session?.wsUrl} userEmail={adminEmail || null} onGoToFreeBots={() => setActiveTab('freebots')} />
           )}
 
           {/* Charts — 100% native canvas live chart */}
