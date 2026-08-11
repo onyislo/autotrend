@@ -143,56 +143,104 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
   const handleXmlUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const suggestedName = file.name.replace(/\.[^.]+$/, '').toUpperCase();
+    const botName = prompt('Enter a name for your uploaded bot:', suggestedName);
+    if (!botName || !botName.trim()) return;
+
     const reader = new FileReader();
     reader.onload = async (evt) => {
       const xmlContent = evt.target?.result as string;
-      if (!xmlContent) return;
-      const symbolMatch = xmlContent.match(/<field name="SYMBOL_LIST">(.*?)<\/field>/);
-      const purchaseMatch = xmlContent.match(/<field name="PURCHASE_LIST">(.*?)<\/field>/);
+      const symbolMatch = xmlContent ? xmlContent.match(/<field name="SYMBOL_LIST">(.*?)<\/field>/) : null;
+      const purchaseMatch = xmlContent ? xmlContent.match(/<field name="PURCHASE_LIST">(.*?)<\/field>/) : null;
       const symbol = symbolMatch ? symbolMatch[1] : 'R_50';
       const contractType = purchaseMatch ? purchaseMatch[1] : 'DIGITDIFF';
-      const botName = file.name.replace(/\.xml$/i, '').toUpperCase();
-      const createdBot: BotItem = {
-        id: `admin-xml-${Date.now()}`,
-        name: botName,
-        description: `Admin uploaded XML bot template (${botName}) on ${symbol}.`,
-        is_public: true,
-        strategy: { symbol, contractType, amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 }
-      };
-      handleSaveLocalBot(createdBot);
+
+      const strategy: BotStrategy = { symbol, contractType, amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 };
+      const description = `Uploaded bot (${file.name}) on ${symbol}.`;
+
       try {
-        await supabase.from('trading_bots').insert([{ id: createdBot.id, name: createdBot.name, description: createdBot.description, strategy: createdBot.strategy, is_public: true }]);
-      } catch {}
-      setBots(prev => [createdBot, ...prev.filter(b => b.id !== createdBot.id)]);
-      alert(`✅ Bot template "${botName}" deployed to client base!`);
+        const { data, error } = await supabase.from('trading_bots').insert([{
+          name: botName.trim(),
+          description,
+          strategy,
+          is_public: true
+        }]).select();
+
+        if (!error && data && data.length > 0) {
+          setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
+          alert(`✅ Bot "${botName.trim()}" deployed to Supabase and synced across all devices!`);
+          return;
+        }
+      } catch (err) {
+        console.error('Supabase upload error:', err);
+      }
+
+      // Fallback
+      const fallbackBot: BotItem = {
+        id: `admin-file-${Date.now()}`,
+        name: botName.trim(),
+        description,
+        is_public: true,
+        strategy
+      };
+      handleSaveLocalBot(fallbackBot);
+      setBots(prev => [fallbackBot, ...prev.filter(b => b.id !== fallbackBot.id)]);
+      alert(`✅ Bot "${botName.trim()}" deployed to client base!`);
     };
-    reader.readAsText(file);
+
+    if (file.name.toLowerCase().endsWith('.xml')) {
+      reader.readAsText(file);
+    } else {
+      // Non-XML files
+      reader.onload({ target: { result: '' } } as any);
+    }
+    e.target.value = '';
   };
 
   const handleCreateBot = async () => {
-    if (!newBot.name) return;
-    const createdBot: BotItem = {
-      id: `admin-bot-${Date.now()}`,
-      name: newBot.name,
-      description: newBot.description || 'Custom proprietary strategy deployed by Administrator.',
-      is_public: true,
-      strategy: {
-        symbol: newBot.symbol,
-        contractType: newBot.contractType,
-        amount: Number(newBot.amount),
-        duration: Number(newBot.duration),
-        martingale: newBot.martingale,
-        martingaleMultiplier: Number(newBot.martingaleMultiplier),
-        maxMartingaleSteps: Number(newBot.maxMartingaleSteps),
-        stopLoss: Number(newBot.stopLoss),
-        takeProfit: Number(newBot.takeProfit),
-      }
+    if (!newBot.name.trim()) return;
+    const strategy: BotStrategy = {
+      symbol: newBot.symbol,
+      contractType: newBot.contractType,
+      amount: Number(newBot.amount),
+      duration: Number(newBot.duration),
+      martingale: newBot.martingale,
+      martingaleMultiplier: Number(newBot.martingaleMultiplier),
+      maxMartingaleSteps: Number(newBot.maxMartingaleSteps),
+      stopLoss: Number(newBot.stopLoss),
+      takeProfit: Number(newBot.takeProfit),
     };
+    const description = newBot.description || 'Custom proprietary strategy deployed by Administrator.';
+
     try {
-      await supabase.from('trading_bots').insert([{ name: createdBot.name, description: createdBot.description, strategy: createdBot.strategy, is_public: true }]);
-    } catch {}
-    handleSaveLocalBot(createdBot);
-    setBots(prev => [createdBot, ...prev.filter(b => b.id !== createdBot.id)]);
+      const { data, error } = await supabase.from('trading_bots').insert([{
+        name: newBot.name.trim(),
+        description,
+        strategy,
+        is_public: true
+      }]).select();
+
+      if (!error && data && data.length > 0) {
+        setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
+        setShowCreator(false);
+        setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 });
+        alert('✅ Custom bot strategy published to Supabase and synced across all devices!');
+        return;
+      }
+    } catch (err) {
+      console.error('Supabase create bot error:', err);
+    }
+
+    const fallbackBot: BotItem = {
+      id: `admin-bot-${Date.now()}`,
+      name: newBot.name.trim(),
+      description,
+      is_public: true,
+      strategy
+    };
+    handleSaveLocalBot(fallbackBot);
+    setBots(prev => [fallbackBot, ...prev.filter(b => b.id !== fallbackBot.id)]);
     setShowCreator(false);
     setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 });
     alert('✅ Custom bot strategy published to client dashboard!');
@@ -201,8 +249,8 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
   const handleDeleteBot = async (botId: string) => {
     if (botId.startsWith('default-')) { alert('Default system templates cannot be deleted.'); return; }
     if (!confirm('Are you sure you want to remove this bot template?')) return;
-    handleRemoveLocalBot(botId);
     try { await supabase.from('trading_bots').delete().eq('id', botId); } catch {}
+    handleRemoveLocalBot(botId);
     setBots(prev => prev.filter(b => b.id !== botId));
   };
 

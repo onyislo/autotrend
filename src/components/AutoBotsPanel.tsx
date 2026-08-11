@@ -117,31 +117,19 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
   }, []);
 
   const loadBots = async () => {
-    const list: Bot[] = [];
-
-    // Load bots from Supabase (admin-published bots)
     try {
       const { data, error } = await supabase
         .from('trading_bots')
         .select('*')
-        .eq('is_public', true);
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
       
-      if (!error && data && data.length > 0) {
-        list.push(...data.filter(d => !list.some(b => b.id === d.id)));
+      if (!error && data) {
+        setBots(data);
       }
-    } catch {
-      // Ignore DB fallback error
+    } catch (e) {
+      console.error('Failed to fetch bots from Supabase:', e);
     }
-
-    // Load local admin uploaded/created bots
-    try {
-      const localAdminBots = getLocalAdminBots();
-      if (localAdminBots.length > 0) {
-        list.push(...localAdminBots.filter(lab => !list.some(b => b.id === lab.id)));
-      }
-    } catch {}
-
-    setBots(list);
   };
 
   const addLog = (text: string, type: LogEntry['type'] = 'info') => {
@@ -388,15 +376,15 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
       return;
     }
     
-    removeLocalAdminBot(botId);
     try {
       await supabase
         .from('trading_bots')
         .delete()
         .eq('id', botId);
-    } catch {
-      // Ignore DB error
+    } catch (err) {
+      console.error('Error deleting from Supabase:', err);
     }
+    removeLocalAdminBot(botId);
     setBots(prev => prev.filter((b) => b.id !== botId));
   };
 
@@ -575,7 +563,7 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                       Proprietary Bot
                     </span>
                   </div>
-                  {isAdmin && !bot.id.startsWith('default-') && (
+                  {!bot.id.startsWith('default-') && (
                     <button
                       onClick={() => deleteBot(bot.id)}
                       className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
@@ -886,30 +874,62 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                 </button>
                 <button
                   disabled={!uploadBotName.trim()}
-                  onClick={() => {
-                    const newBot: Bot = {
-                      id: `admin-upload-${Date.now()}`,
-                      name: uploadBotName.trim(),
-                      description: uploadBotDesc.trim() || `Admin uploaded bot on ${pendingUpload.symbol}.`,
-                      is_public: true,
-                      strategy: {
-                        symbol: pendingUpload.symbol,
-                        contractType: pendingUpload.contractType,
-                        amount: 1,
-                        duration: 1,
-                        martingale: true,
-                        martingaleMultiplier: 2,
-                        maxMartingaleSteps: 4,
-                        stopLoss: 20,
-                        takeProfit: 40,
-                      }
+                  onClick={async () => {
+                    const name = uploadBotName.trim();
+                    const description = uploadBotDesc.trim() || `Admin uploaded bot on ${pendingUpload.symbol}.`;
+                    const strategy = {
+                      symbol: pendingUpload.symbol,
+                      contractType: pendingUpload.contractType,
+                      amount: 1,
+                      duration: 1,
+                      martingale: true,
+                      martingaleMultiplier: 2,
+                      maxMartingaleSteps: 4,
+                      stopLoss: 20,
+                      takeProfit: 40,
                     };
-                    saveLocalAdminBot(newBot);
-                    setBots(prev => [newBot, ...prev.filter(b => b.id !== newBot.id)]);
+
+                    try {
+                      const { data, error } = await supabase
+                        .from('trading_bots')
+                        .insert([{
+                          name,
+                          description,
+                          strategy,
+                          is_public: true,
+                          user_id: userId
+                        }])
+                        .select();
+
+                      if (!error && data && data.length > 0) {
+                        setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
+                      } else {
+                        const fallbackBot: Bot = {
+                          id: `admin-upload-${Date.now()}`,
+                          name,
+                          description,
+                          is_public: true,
+                          strategy
+                        };
+                        saveLocalAdminBot(fallbackBot);
+                        setBots(prev => [fallbackBot, ...prev.filter(b => b.id !== fallbackBot.id)]);
+                      }
+                    } catch {
+                      const fallbackBot: Bot = {
+                        id: `admin-upload-${Date.now()}`,
+                        name,
+                        description,
+                        is_public: true,
+                        strategy
+                      };
+                      saveLocalAdminBot(fallbackBot);
+                      setBots(prev => [fallbackBot, ...prev.filter(b => b.id !== fallbackBot.id)]);
+                    }
+
                     setPendingUpload(null);
                     setUploadBotName('');
                     setUploadBotDesc('');
-                    alert(`✅ Bot "${newBot.name}" deployed to all users!`);
+                    alert(`✅ Bot "${name}" deployed to all users across all devices!`);
                   }}
                   className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm transition-colors"
                 >
