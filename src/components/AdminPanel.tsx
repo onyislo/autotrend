@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Upload, Plus, Trash2, Users, Bot, Settings,
@@ -44,7 +44,6 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
   const [showCreator, setShowCreator] = useState(false);
   const [selectedBot, setSelectedBot] = useState<BotItem | null>(null);
   const [hamburgerOpen, setHamburgerOpen] = useState(false);
-  const tickRef = useRef(0);
 
   const [newBot, setNewBot] = useState({
     name: '',
@@ -84,9 +83,9 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
     loadLiveTrades();
 
     const interval = setInterval(() => {
-      tickRef.current += 1;
-      simulateNewTrade();
-    }, 5000);
+      loadClientData();
+      loadLiveTrades();
+    }, 10000);
 
     return () => clearInterval(interval);
   }, []);
@@ -216,13 +215,13 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
           const balObj = balances?.find((b: any) => b.user_id === p.id);
           const userTrades = trades?.filter((t: any) => t.user_id === p.id) || [];
           return {
-            id: p.id.substring(0, 8).toUpperCase(),
-            name: p.full_name || 'Trader',
-            email: p.email,
+            id: p.id ? p.id.substring(0, 8).toUpperCase() : 'USER',
+            name: p.full_name || p.email?.split('@')[0] || 'Trader',
+            email: p.email || 'No email',
             accountType: balObj?.currency ? `Real (${balObj.currency})` : 'Real (USD)',
             activeBot: userTrades.length > 0 ? 'Auto Bot' : 'None',
             status: 'Online',
-            balance: balObj?.balance ? `$${Number(balObj.balance).toFixed(2)}` : '$0.00',
+            balance: balObj?.balance !== undefined ? `$${Number(balObj.balance).toFixed(2)}` : '$0.00',
             totalTrades: userTrades.length
           };
         });
@@ -232,12 +231,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
       }
     } catch {}
 
-    setClients([
-      { id: 'CR9048121', name: 'John Oduya', email: 'john@example.com', accountType: 'Real (USD)', activeBot: 'AUTOTRENDX BOT', status: 'Online', balance: '$1,480.50', totalTrades: 42 },
-      { id: 'VRTC59102', name: 'Amina Hassan', email: 'amina@example.com', accountType: 'Demo', activeBot: 'V75 Scalper', status: 'Trading', balance: '$10,240.00', totalTrades: 89 },
-      { id: 'CR8310943', name: 'Priya Naidoo', email: 'priya@example.com', accountType: 'Real (USD)', activeBot: 'None', status: 'Idle', balance: '$3,150.20', totalTrades: 12 },
-      { id: 'VRTC88123', name: 'Raj Kumar', email: 'raj@example.com', accountType: 'Demo', activeBot: 'Digit Differ Pro', status: 'Online', balance: '$9,820.00', totalTrades: 156 },
-    ]);
+    setClients([]);
     setIsUsingLiveDb(false);
   };
 
@@ -246,41 +240,18 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
       const { data, error } = await supabase.from('trades').select('*').order('created_at', { ascending: false }).limit(10);
       if (!error && data && data.length > 0) {
         setLiveTrades(data.map((t: any) => ({
-          id: t.id, email: 'client@deriv.com', symbol: t.symbol,
-          type: t.type === 'buy' ? 'RISE' : 'FALL',
-          amount: t.amount, profit: t.profit_loss,
-          time: new Date(t.created_at).toLocaleTimeString()
+          id: t.id,
+          email: t.user_email || 'client@deriv.com',
+          symbol: t.symbol || 'R_50',
+          type: t.type === 'buy' ? 'RISE' : (t.contract_type || 'TRADE'),
+          amount: t.amount || t.stake || 0,
+          profit: t.profit_loss !== undefined ? t.profit_loss : (t.profit || 0),
+          time: t.created_at ? new Date(t.created_at).toLocaleTimeString() : new Date().toLocaleTimeString()
         })));
         return;
       }
     } catch {}
-    setLiveTrades([
-      { id: 't1', email: 'john@example.com', symbol: 'R_50', type: 'RISE', amount: 5.00, profit: 4.80, time: new Date(Date.now() - 120000).toLocaleTimeString() },
-      { id: 't2', email: 'amina@example.com', symbol: 'R_75', type: 'FALL', amount: 10.00, profit: -10.00, time: new Date(Date.now() - 340000).toLocaleTimeString() },
-      { id: 't3', email: 'raj@example.com', symbol: 'R_100', type: 'RISE', amount: 2.00, profit: 1.90, time: new Date(Date.now() - 600000).toLocaleTimeString() },
-    ]);
-  };
-
-  const simulateNewTrade = () => {
-    const clientsList = ['john@example.com', 'amina@example.com', 'priya@example.com', 'raj@example.com'];
-    const symbols = ['R_10', 'R_25', 'R_50', 'R_75', 'R_100'];
-    const types = ['RISE', 'FALL', 'DIFFERS', 'MATCHES'];
-    const amounts = [1, 2, 5, 10, 20];
-    const randomClient = clientsList[Math.floor(Math.random() * clientsList.length)];
-    const randomSymbol = symbols[Math.floor(Math.random() * symbols.length)];
-    const randomType = types[Math.floor(Math.random() * types.length)];
-    const randomAmount = amounts[Math.floor(Math.random() * amounts.length)];
-    const isWin = Math.random() > 0.4;
-    const randomProfit = isWin ? randomAmount * 0.95 : -randomAmount;
-    const newTrade = { id: `t-${Date.now()}`, email: randomClient, symbol: randomSymbol, type: randomType, amount: randomAmount, profit: randomProfit, time: new Date().toLocaleTimeString() };
-    setLiveTrades(prev => [newTrade, ...prev].slice(0, 12));
-    setClients(prevClients => prevClients.map(c => {
-      if (c.email === randomClient) {
-        const currentBal = parseFloat(String(c.balance).replace('$', '').replace(',', ''));
-        return { ...c, status: 'Trading', balance: `$${(currentBal + randomProfit).toFixed(2)}`, totalTrades: (c.totalTrades || 0) + 1, activeBot: randomType === 'RISE' ? 'V75 Scalper' : 'Digit Differ Pro' };
-      }
-      return c;
-    }));
+    setLiveTrades([]);
   };
 
   const handleSaveSettings = () => {
@@ -355,53 +326,92 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
           </div>
         </div>
 
-        {/* ── HAMBURGER NAVIGATION DRAWER / MENU ────────────────── */}
-        <AnimatePresence>
-          {hamburgerOpen && (
+      {/* ── HAMBURGER NAVIGATION SIDEBAR DRAWER (OPENS FROM LEFT) ────────────────── */}
+      <AnimatePresence>
+        {hamburgerOpen && (
+          <>
+            {/* Backdrop Overlay */}
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="border-t border-white/10 overflow-hidden"
-              style={{ background: 'rgba(10, 15, 29, 0.98)' }}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setHamburgerOpen(false)}
+            />
+            {/* Left-sliding Drawer Content */}
+            <motion.aside
+              className="fixed top-0 left-0 bottom-0 z-50 w-72 sm:w-80 shadow-2xl flex flex-col border-r border-white/10 overflow-y-auto"
+              style={{ background: '#0a0f1d' }}
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             >
-              <div className="max-w-screen-2xl mx-auto px-6 py-4 space-y-3">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400/80 mb-2">Admin Navigation</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {TABS.map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => { setActiveTab(tab.id); setHamburgerOpen(false); }}
-                      className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border ${activeTab === tab.id ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' : 'bg-white/5 text-gray-300 border-white/5 hover:bg-white/10 hover:text-white'}`}
-                    >
-                      {tab.icon}
-                      {tab.label}
-                    </button>
-                  ))}
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between px-5 h-16 border-b border-white/10 bg-gray-950 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+                    <Shield size={16} className="text-white" />
+                  </div>
+                  <div>
+                    <span className="font-black text-white text-sm tracking-tight block">AutoTrendX</span>
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-400">Admin Console</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setHamburgerOpen(false)}
+                  className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Drawer Body - Navigation Links */}
+              <div className="p-5 space-y-6 flex-1">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400/80 mb-3 px-1">Admin Navigation</p>
+                  <div className="space-y-1.5">
+                    {TABS.map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => { setActiveTab(tab.id); setHamburgerOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all border ${activeTab === tab.id ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-lg shadow-emerald-500/10' : 'bg-white/5 text-gray-300 border-white/5 hover:bg-white/10 hover:text-white'}`}
+                      >
+                        {tab.icon}
+                        <span>{tab.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                {/* Additional Quick Actions */}
+                <div className="pt-4 border-t border-white/10 space-y-2">
                   <a
                     href="/dashboard"
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all"
                   >
-                    <Eye size={14} /> Open Client View
+                    <Eye size={15} /> Open Client View
                   </a>
 
-                  {/* LOGOUT BUTTON IN HAMBURGER */}
                   <button
                     onClick={() => { setHamburgerOpen(false); onLogout(); }}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 hover:border-red-500/50"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 hover:border-red-500/50"
                   >
-                    <LogOut size={14} /> Logout Admin Session
+                    <LogOut size={15} /> Logout Admin Session
                   </button>
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              {/* Drawer Footer */}
+              <div className="p-4 border-t border-white/10 bg-gray-950/60 text-[10px] text-gray-500 text-center">
+                Signed in as <span className="text-gray-300 font-mono">{adminEmail}</span>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
       </header>
 
       <div className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
@@ -478,29 +488,35 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
                 <span className="text-[10px] font-bold uppercase text-emerald-400 tracking-widest">Auto-streaming</span>
               </div>
               <div className="divide-y divide-white/[0.04]">
-                {liveTrades.slice(0, 8).map((t, i) => {
-                  const isProfit = t.profit >= 0;
-                  return (
-                    <motion.div key={t.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
-                      className="px-6 py-3.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isProfit ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                          {isProfit ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                {liveTrades.length === 0 ? (
+                  <div className="px-6 py-10 text-center text-gray-500 text-xs font-medium">
+                    No live trade records found in the database.
+                  </div>
+                ) : (
+                  liveTrades.slice(0, 8).map((t, i) => {
+                    const isProfit = t.profit >= 0;
+                    return (
+                      <motion.div key={t.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
+                        className="px-6 py-3.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isProfit ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                            {isProfit ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-gray-200">{t.symbol.replace('_', ' ')} · <span className="text-gray-400">{t.type}</span></p>
+                            <p className="text-[10px] text-gray-500 font-mono">{t.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold text-gray-200">{t.symbol.replace('_', ' ')} · <span className="text-gray-400">{t.type}</span></p>
-                          <p className="text-[10px] text-gray-500 font-mono">{t.email}</p>
+                        <div className="text-right">
+                          <p className={`text-sm font-black ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {isProfit ? `+$${Number(t.profit).toFixed(2)}` : `-$${Math.abs(t.profit).toFixed(2)}`}
+                          </p>
+                          <p className="text-[10px] text-gray-600">{t.time}</p>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-black ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {isProfit ? `+$${Number(t.profit).toFixed(2)}` : `-$${Math.abs(t.profit).toFixed(2)}`}
-                        </p>
-                        <p className="text-[10px] text-gray-600">{t.time}</p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                      </motion.div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -508,27 +524,33 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
             <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
               <div className="px-5 py-4 border-b border-white/5">
                 <h2 className="font-bold text-white text-sm">Connected Clients</h2>
-                <p className="text-[10px] text-gray-500 mt-0.5">{isUsingLiveDb ? '🟢 Live database' : '⚡ Sandbox mode'}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{isUsingLiveDb ? '🟢 Live database' : '⚡ No active database records'}</p>
               </div>
               <div className="divide-y divide-white/[0.04]">
-                {clients.map(c => (
-                  <div key={c.id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #10b981, #3b82f6)' }}>
-                      {c.name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-200 truncate">{c.name}</p>
-                      <p className="text-[10px] text-gray-500 truncate">{c.activeBot !== 'None' ? `Running: ${c.activeBot}` : 'No active bot'}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs font-bold text-white font-mono">{c.balance}</p>
-                      <span className={`text-[9px] font-bold rounded px-1.5 py-0.5 ${c.status === 'Trading' ? 'bg-emerald-500/15 text-emerald-400' : c.status === 'Online' ? 'bg-sky-500/15 text-sky-400' : 'bg-gray-700 text-gray-400'}`}>
-                        {c.status}
-                      </span>
-                    </div>
+                {clients.length === 0 ? (
+                  <div className="px-5 py-10 text-center text-gray-500 text-xs font-medium">
+                    No client accounts registered yet.
                   </div>
-                ))}
+                ) : (
+                  clients.map(c => (
+                    <div key={c.id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white flex-shrink-0"
+                        style={{ background: 'linear-gradient(135deg, #10b981, #3b82f6)' }}>
+                        {c.name.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-200 truncate">{c.name}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{c.activeBot !== 'None' ? `Running: ${c.activeBot}` : 'No active bot'}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs font-bold text-white font-mono">{c.balance}</p>
+                        <span className={`text-[9px] font-bold rounded px-1.5 py-0.5 ${c.status === 'Trading' ? 'bg-emerald-500/15 text-emerald-400' : c.status === 'Online' ? 'bg-sky-400/15 text-sky-400' : 'bg-gray-700 text-gray-400'}`}>
+                          {c.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -617,7 +639,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
                   <Database size={16} className="text-sky-400" /> Client Account Registry
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {isUsingLiveDb ? '🟢 Connected to live Supabase database' : '⚡ Showing simulated sandbox accounts'} · Updates every 5 seconds
+                  {isUsingLiveDb ? '🟢 Connected to live Supabase database' : '⚡ Direct Database Sync'} · Updates every 10 seconds
                 </p>
               </div>
               <button onClick={() => { loadClientData(); loadLiveTrades(); }}
@@ -638,38 +660,46 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
                   </tr>
                 </thead>
                 <tbody>
-                  {clients.map((client, i) => (
-                    <motion.tr key={client.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
-                      className="border-t border-white/[0.04] hover:bg-white/[0.025] transition-colors">
-                      <td className="px-5 py-4 font-mono text-xs font-bold text-emerald-400">{client.id}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white flex-shrink-0"
-                            style={{ background: 'linear-gradient(135deg, #10b981, #3b82f6)' }}>
-                            {client.name.charAt(0)}
+                  {clients.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-10 text-center text-gray-500 text-xs font-medium">
+                        No client accounts found in the database.
+                      </td>
+                    </tr>
+                  ) : (
+                    clients.map((client, i) => (
+                      <motion.tr key={client.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
+                        className="border-t border-white/[0.04] hover:bg-white/[0.025] transition-colors">
+                        <td className="px-5 py-4 font-mono text-xs font-bold text-emerald-400">{client.id}</td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white flex-shrink-0"
+                              style={{ background: 'linear-gradient(135deg, #10b981, #3b82f6)' }}>
+                              {client.name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-gray-200">{client.name}</p>
+                              <p className="text-[10px] text-gray-500 font-mono">{client.email}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-200">{client.name}</p>
-                            <p className="text-[10px] text-gray-500 font-mono">{client.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className={`text-[9px] font-extrabold uppercase px-2 py-1 rounded-lg ${client.accountType.includes('Real') ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-amber-400 bg-amber-500/10 border border-amber-500/20'}`}>
-                          {client.accountType}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-xs text-gray-300 font-medium">{client.activeBot}</td>
-                      <td className="px-5 py-4">
-                        <span className="flex items-center gap-2 text-[10px] font-semibold text-gray-300">
-                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${client.status === 'Trading' ? 'bg-emerald-400 animate-pulse' : client.status === 'Online' ? 'bg-sky-400' : 'bg-gray-600'}`} />
-                          {client.status}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-xs font-mono text-gray-400">{client.totalTrades ?? 0}</td>
-                      <td className="px-5 py-4 text-sm font-black text-white font-mono">{client.balance}</td>
-                    </motion.tr>
-                  ))}
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`text-[9px] font-extrabold uppercase px-2 py-1 rounded-lg ${client.accountType.includes('Real') ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-amber-400 bg-amber-500/10 border border-amber-500/20'}`}>
+                            {client.accountType}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-xs text-gray-300 font-medium">{client.activeBot}</td>
+                        <td className="px-5 py-4">
+                          <span className="flex items-center gap-2 text-[10px] font-semibold text-gray-300">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${client.status === 'Trading' ? 'bg-emerald-400 animate-pulse' : client.status === 'Online' ? 'bg-sky-400' : 'bg-gray-600'}`} />
+                            {client.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-xs font-mono text-gray-400">{client.totalTrades ?? 0}</td>
+                        <td className="px-5 py-4 text-sm font-black text-white font-mono">{client.balance}</td>
+                      </motion.tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -686,25 +716,31 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
                 <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Streaming</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.04]">
-                {liveTrades.slice(0, 4).map(t => {
-                  const isProfit = t.profit >= 0;
-                  return (
-                    <motion.div key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      className="px-5 py-4 flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-gray-300 font-mono">{t.symbol}</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${t.type === 'RISE' || t.type === 'MATCHES' ? 'text-sky-400 bg-sky-500/10' : 'text-violet-400 bg-violet-500/10'}`}>{t.type}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500">Stake: ${Number(t.amount).toFixed(2)}</span>
-                        <span className={`text-sm font-black ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {isProfit ? '+' : ''}{Number(t.profit).toFixed(2)}
-                        </span>
-                      </div>
-                      <p className="text-[9px] text-gray-600 truncate">{t.email}</p>
-                    </motion.div>
-                  );
-                })}
+                {liveTrades.length === 0 ? (
+                  <div className="col-span-full px-6 py-8 text-center text-gray-500 text-xs font-medium">
+                    No trade events recorded.
+                  </div>
+                ) : (
+                  liveTrades.slice(0, 4).map(t => {
+                    const isProfit = t.profit >= 0;
+                    return (
+                      <motion.div key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        className="px-5 py-4 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-gray-300 font-mono">{t.symbol}</span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${t.type === 'RISE' || t.type === 'MATCHES' ? 'text-sky-400 bg-sky-500/10' : 'text-violet-400 bg-violet-500/10'}`}>{t.type}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-gray-500">Stake: ${Number(t.amount).toFixed(2)}</span>
+                          <span className={`text-sm font-black ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {isProfit ? '+' : ''}{Number(t.profit).toFixed(2)}
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-gray-600 truncate">{t.email}</p>
+                      </motion.div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
