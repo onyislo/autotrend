@@ -317,6 +317,9 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
   const createAdminBot = async () => {
     if (!newBotData.name) return;
 
+    // Use userEmail as user_id since this app uses Deriv OAuth (not Supabase auth)
+    const effectiveUserId = userId ?? userEmail ?? 'admin';
+
     const botObj: Partial<Bot> = {
       name: newBotData.name,
       description: newBotData.description,
@@ -334,39 +337,29 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
       }
     };
 
-    try {
-      const { data, error } = await supabase
-        .from('trading_bots')
-        .insert([{
-          user_id: userId,
-          name: botObj.name,
-          description: botObj.description,
-          strategy: botObj.strategy,
-          is_public: true
-        }])
-        .select();
+    const { data, error } = await supabase
+      .from('trading_bots')
+      .insert([{
+        user_id: effectiveUserId,
+        name: botObj.name,
+        description: botObj.description,
+        strategy: botObj.strategy,
+        is_public: true
+      }])
+      .select();
 
-      if (!error && data) {
-        saveLocalAdminBot(data[0]);
-        setBots([...bots, data[0]]);
-        setShowCreator(false);
-        alert('Admin Bot created and published successfully!');
-      } else {
-        throw error;
-      }
-    } catch {
-      // Fallback for demo / offline mode
-      const mockBot: Bot = {
-        id: `mock-${Date.now()}`,
-        name: botObj.name!,
-        description: botObj.description!,
-        is_public: true,
-        strategy: botObj.strategy!
-      };
-      saveLocalAdminBot(mockBot);
-      setBots([...bots, mockBot]);
+    if (error) {
+      // Surface the real error to the admin — do NOT silently fall back to localStorage
+      console.error('[AutoTrendX] Supabase bot insert failed:', error);
+      alert(`❌ Failed to save bot to Supabase:\n\n${error.message}\n\nCheck your Supabase table permissions (RLS) and ensure the "trading_bots" table exists.`);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      saveLocalAdminBot(data[0]);
+      setBots([...bots, data[0]]);
       setShowCreator(false);
-      alert('Admin Bot created and published successfully!');
+      alert('✅ Admin Bot created and saved to Supabase successfully!');
     }
   };
 
@@ -877,6 +870,7 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                   onClick={async () => {
                     const name = uploadBotName.trim();
                     const description = uploadBotDesc.trim() || `Admin uploaded bot on ${pendingUpload.symbol}.`;
+                    const effectiveUserId = userId ?? userEmail ?? 'admin';
                     const strategy = {
                       symbol: pendingUpload.symbol,
                       contractType: pendingUpload.contractType,
@@ -889,47 +883,32 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                       takeProfit: 40,
                     };
 
-                    try {
-                      const { data, error } = await supabase
-                        .from('trading_bots')
-                        .insert([{
-                          name,
-                          description,
-                          strategy,
-                          is_public: true,
-                          user_id: userId
-                        }])
-                        .select();
-
-                      if (!error && data && data.length > 0) {
-                        setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
-                      } else {
-                        const fallbackBot: Bot = {
-                          id: `admin-upload-${Date.now()}`,
-                          name,
-                          description,
-                          is_public: true,
-                          strategy
-                        };
-                        saveLocalAdminBot(fallbackBot);
-                        setBots(prev => [fallbackBot, ...prev.filter(b => b.id !== fallbackBot.id)]);
-                      }
-                    } catch {
-                      const fallbackBot: Bot = {
-                        id: `admin-upload-${Date.now()}`,
+                    const { data, error } = await supabase
+                      .from('trading_bots')
+                      .insert([{
                         name,
                         description,
+                        strategy,
                         is_public: true,
-                        strategy
-                      };
-                      saveLocalAdminBot(fallbackBot);
-                      setBots(prev => [fallbackBot, ...prev.filter(b => b.id !== fallbackBot.id)]);
+                        user_id: effectiveUserId
+                      }])
+                      .select();
+
+                    if (error) {
+                      // Surface the real error — do NOT silently fall back to localStorage
+                      console.error('[AutoTrendX] Supabase bot upload failed:', error);
+                      alert(`❌ Failed to save bot to Supabase:\n\n${error.message}\n\nCheck your Supabase table permissions (RLS) and ensure the "trading_bots" table exists.`);
+                      return;
                     }
 
-                    setPendingUpload(null);
-                    setUploadBotName('');
-                    setUploadBotDesc('');
-                    alert(`✅ Bot "${name}" deployed to all users across all devices!`);
+                    if (data && data.length > 0) {
+                      saveLocalAdminBot(data[0]);
+                      setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
+                      setPendingUpload(null);
+                      setUploadBotName('');
+                      setUploadBotDesc('');
+                      alert(`✅ Bot "${name}" deployed to Supabase and visible to all users!`);
+                    }
                   }}
                   className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm transition-colors"
                 >
