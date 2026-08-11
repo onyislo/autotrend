@@ -6,7 +6,7 @@ import {
   AlertTriangle, RefreshCw, Eye, Sparkles, Zap,
   TrendingUp, TrendingDown, Server, Lock,
   BarChart2, Globe, Power, AlertCircle,
-  Menu, X
+  Menu, X, Edit2
 } from 'lucide-react';
 import { SYNTHETIC_INDICES } from '../lib/derivAPI';
 import { supabase } from '../lib/supabase';
@@ -44,6 +44,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
   const [showCreator, setShowCreator] = useState(false);
   const [selectedBot, setSelectedBot] = useState<BotItem | null>(null);
   const [hamburgerOpen, setHamburgerOpen] = useState(false);
+  const [editingBotId, setEditingBotId] = useState<string | null>(null);
 
   const [newBot, setNewBot] = useState({
     name: '',
@@ -179,6 +180,24 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
     e.target.value = '';
   };
 
+  const handleEditBot = (bot: BotItem) => {
+    setNewBot({
+      name: bot.name,
+      description: bot.description || '',
+      symbol: bot.strategy.symbol || 'R_50',
+      contractType: bot.strategy.contractType || 'DIGITDIFF',
+      amount: bot.strategy.amount || 1,
+      duration: bot.strategy.duration || 1,
+      martingale: !!bot.strategy.martingale,
+      martingaleMultiplier: bot.strategy.martingaleMultiplier || 2,
+      maxMartingaleSteps: bot.strategy.maxMartingaleSteps || 4,
+      stopLoss: bot.strategy.stopLoss || 20,
+      takeProfit: bot.strategy.takeProfit || 40,
+    });
+    setEditingBotId(bot.id);
+    setShowCreator(true);
+  };
+
   const handleCreateBot = async () => {
     if (!newBot.name.trim()) return;
     const strategy: BotStrategy = {
@@ -194,25 +213,55 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
     };
     const description = newBot.description || 'Custom proprietary strategy deployed by Administrator.';
 
-    const { data, error } = await supabase.from('trading_bots').insert([{
-      name: newBot.name.trim(),
-      description,
-      strategy,
-      is_public: true,
-      user_id: adminEmail
-    }]).select();
+    if (editingBotId) {
+      // Update existing bot in database
+      const { data, error } = await supabase
+        .from('trading_bots')
+        .update({
+          name: newBot.name.trim(),
+          description,
+          strategy,
+          is_public: true,
+          user_id: adminEmail
+        })
+        .eq('id', editingBotId)
+        .select();
 
-    if (error) {
-      console.error('[AdminPanel] Create bot error:', error);
-      alert(`❌ Failed to save bot to Supabase:\n\nCode: ${error.code}\nMessage: ${error.message}\n\nMake sure you have run supabase-schema.sql in your Supabase SQL Editor.`);
-      return;
-    }
+      if (error) {
+        console.error('[AdminPanel] Update bot error:', error);
+        alert(`❌ Failed to update bot:\n\nMessage: ${error.message}`);
+        return;
+      }
 
-    if (data && data.length > 0) {
-      setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
-      setShowCreator(false);
-      setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 });
-      alert('✅ Bot deployed to Supabase and visible to all clients!');
+      if (data && data.length > 0) {
+        setBots(prev => prev.map(b => b.id === editingBotId ? data[0] : b));
+        setShowCreator(false);
+        setEditingBotId(null);
+        setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 });
+        alert('✅ Bot configuration updated successfully!');
+      }
+    } else {
+      // Create new bot in database
+      const { data, error } = await supabase.from('trading_bots').insert([{
+        name: newBot.name.trim(),
+        description,
+        strategy,
+        is_public: true,
+        user_id: adminEmail
+      }]).select();
+
+      if (error) {
+        console.error('[AdminPanel] Create bot error:', error);
+        alert(`❌ Failed to save bot to Supabase:\n\nMessage: ${error.message}`);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
+        setShowCreator(false);
+        setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 });
+        alert('✅ Bot deployed to Supabase and visible to all clients!');
+      }
     }
   };
 
@@ -454,73 +503,75 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
 
       <div className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
 
-        {/* ── STAT CARDS (always visible) ──────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {/* Total Users */}
-          <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'rgba(251,146,60,0.07)', border: '1px solid rgba(251,146,60,0.18)' }}>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Users</p>
-              <p className="text-3xl font-black text-white">{totalUsers}</p>
-              <p className="text-[10px] text-orange-400 mt-1">Registered on site</p>
+        {/* ── STAT CARDS (only visible on Overview) ─────────── */}
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {/* Total Users */}
+            <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'rgba(251,146,60,0.07)', border: '1px solid rgba(251,146,60,0.18)' }}>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Users</p>
+                <p className="text-3xl font-black text-white">{totalUsers}</p>
+                <p className="text-[10px] text-orange-400 mt-1">Registered on site</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-orange-400" style={{ background: 'rgba(251,146,60,0.12)', border: '1px solid rgba(251,146,60,0.25)' }}>
+                <Users size={22} />
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-orange-400" style={{ background: 'rgba(251,146,60,0.12)', border: '1px solid rgba(251,146,60,0.25)' }}>
-              <Users size={22} />
-            </div>
-          </div>
 
-          {/* Deployed Bots */}
-          <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)' }}>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Deployed Bots</p>
-              <p className="text-3xl font-black text-white">{bots.length}</p>
-              <p className="text-[10px] text-emerald-400 mt-1">Available to all clients</p>
+            {/* Deployed Bots */}
+            <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)' }}>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Deployed Bots</p>
+                <p className="text-3xl font-black text-white">{bots.length}</p>
+                <p className="text-[10px] text-emerald-400 mt-1">Available to all clients</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-emerald-400" style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)' }}>
+                <Bot size={22} />
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-emerald-400" style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)' }}>
-              <Bot size={22} />
-            </div>
-          </div>
 
-          {/* Total Trades */}
-          <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'rgba(14,165,233,0.07)', border: '1px solid rgba(14,165,233,0.18)' }}>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Trades</p>
-              <p className="text-3xl font-black text-white">{totalTrades}</p>
-              <p className="text-[10px] text-sky-400 mt-1">All-time trade executions</p>
+            {/* Total Trades */}
+            <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'rgba(14,165,233,0.07)', border: '1px solid rgba(14,165,233,0.18)' }}>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Trades</p>
+                <p className="text-3xl font-black text-white">{totalTrades}</p>
+                <p className="text-[10px] text-sky-400 mt-1">All-time trade executions</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sky-400" style={{ background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.25)' }}>
+                <TrendingUp size={22} />
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sky-400" style={{ background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.25)' }}>
-              <TrendingUp size={22} />
-            </div>
-          </div>
 
-          {/* API Status */}
-          <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.18)' }}>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Deriv API</p>
-              <p className="text-xl font-black text-emerald-400">Operational</p>
-              <p className="text-[10px] text-gray-500 font-mono mt-1">App ID: {settings.appId}</p>
+            {/* API Status */}
+            <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.18)' }}>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Deriv API</p>
+                <p className="text-xl font-black text-emerald-400">Operational</p>
+                <p className="text-[10px] text-gray-500 font-mono mt-1">App ID: {settings.appId}</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-violet-400" style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}>
+                <Server size={22} />
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-violet-400" style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}>
-              <Server size={22} />
-            </div>
-          </div>
 
-          {/* Maintenance Mode */}
-          <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: settings.maintenanceMode ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.07)', border: `1px solid ${settings.maintenanceMode ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.18)'}` }}>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">System Mode</p>
-              <p className={`text-xl font-black ${settings.maintenanceMode ? 'text-red-400' : 'text-emerald-400'}`}>
-                {settings.maintenanceMode ? 'Maintenance' : 'Live'}
-              </p>
-              <p className="text-[10px] text-gray-500 mt-1">
-                {settings.maintenanceMode ? 'Trading suspended for clients' : 'All systems operational'}
-              </p>
-            </div>
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${settings.maintenanceMode ? 'text-red-400' : 'text-emerald-400'}`}
-              style={{ background: settings.maintenanceMode ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)', border: `1px solid ${settings.maintenanceMode ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.25)'}` }}>
-              <Power size={22} />
+            {/* Maintenance Mode */}
+            <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: settings.maintenanceMode ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.07)', border: `1px solid ${settings.maintenanceMode ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.18)'}` }}>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">System Mode</p>
+                <p className={`text-xl font-black ${settings.maintenanceMode ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {settings.maintenanceMode ? 'Maintenance' : 'Live'}
+                </p>
+                <p className="text-[10px] text-gray-500 mt-1">
+                  {settings.maintenanceMode ? 'Trading suspended for clients' : 'All systems operational'}
+                </p>
+              </div>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${settings.maintenanceMode ? 'text-red-400' : 'text-emerald-400'}`}
+                style={{ background: settings.maintenanceMode ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)', border: `1px solid ${settings.maintenanceMode ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.25)'}` }}>
+                <Power size={22} />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* ── OVERVIEW TAB ─────────────────────────────────── */}
         {activeTab === 'overview' && (
@@ -669,9 +720,17 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
                     <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
                       <CheckCircle2 size={11} /> Live for Clients
                     </span>
-                    <button onClick={() => setSelectedBot(bot)} className="text-[10px] text-gray-400 hover:text-white font-semibold hover:underline transition-colors">
-                      Inspect →
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditBot(bot)}
+                        className="flex items-center gap-1 text-[10px] text-sky-400 hover:text-sky-300 font-semibold px-2 py-1 rounded-lg hover:bg-sky-500/10 transition-all"
+                        title="Edit bot configuration">
+                        <Edit2 size={10} /> Edit
+                      </button>
+                      <button onClick={() => setSelectedBot(bot)} className="text-[10px] text-gray-400 hover:text-white font-semibold hover:underline transition-colors">
+                        Inspect →
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               ))}
@@ -949,10 +1008,15 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
               style={{ background: '#0d1626', border: '1px solid rgba(255,255,255,0.1)' }}>
               <div className="flex justify-between items-start border-b border-white/5 pb-4">
                 <div>
-                  <h3 className="font-black text-white text-base">Create & Deploy Proprietary Bot</h3>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Publish custom strategy parameters to all client accounts</p>
+                  <h3 className="font-black text-white text-base flex items-center gap-2">
+                    {editingBotId ? <Edit2 size={15} className="text-sky-400" /> : <Sparkles size={15} className="text-emerald-400" />}
+                    {editingBotId ? 'Edit Bot Configuration' : 'Create & Deploy Proprietary Bot'}
+                  </h3>
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    {editingBotId ? 'Update strategy parameters — changes apply instantly to all clients.' : 'Publish custom strategy parameters to all client accounts'}
+                  </p>
                 </div>
-                <button onClick={() => setShowCreator(false)} className="text-gray-500 hover:text-white font-bold text-xl leading-none">✕</button>
+                <button onClick={() => { setShowCreator(false); setEditingBotId(null); }} className="text-gray-500 hover:text-white font-bold text-xl leading-none">✕</button>
               </div>
 
               <div className="space-y-4">
@@ -1042,15 +1106,15 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
               </div>
 
               <div className="flex gap-3 border-t border-white/5 pt-4">
-                <button onClick={() => setShowCreator(false)}
+                <button onClick={() => { setShowCreator(false); setEditingBotId(null); setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 }); }}
                   className="flex-1 py-3 rounded-xl font-bold text-sm text-gray-400 transition-all"
                   style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
                   Cancel
                 </button>
                 <button onClick={handleCreateBot} disabled={!newBot.name}
-                  className="flex-1 py-3 rounded-xl font-black text-sm text-white transition-all disabled:opacity-40"
-                  style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
-                  Publish & Deploy Bot
+                  className="flex-1 py-3 rounded-xl font-black text-sm text-white transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                  style={{ background: editingBotId ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : 'linear-gradient(135deg, #10b981, #059669)' }}>
+                  {editingBotId ? <><Edit2 size={14} /> Save Changes</> : <>Publish & Deploy Bot</>}
                 </button>
               </div>
             </motion.div>
