@@ -3,6 +3,7 @@ import App from '../App';
 import Dashboard from './Dashboard';
 import AdminRoute from './AdminRoute';
 import { handleCallback, isLoggedIn } from '../lib/finalAuth';
+import { getAdminSession } from './AdminLoginPage';
 
 export default function Router() {
   const [showDashboard, setShowDashboard] = useState(false);
@@ -108,5 +109,9 @@ export default function Router() {
     );
   }
 
-  return showDashboard ? <Dashboard /> : <App />;
+  // Pass adminEmail to Dashboard so isAdmin check works inside AutoBotsPanel
+  const adminSession = getAdminSession();
+  const adminEmail = adminSession?.loggedIn ? adminSession.email : undefined;
+
+  return showDashboard ? <Dashboard adminEmail={adminEmail} /> : <App />;
 }

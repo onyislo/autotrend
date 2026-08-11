@@ -159,40 +159,29 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
       const strategy: BotStrategy = { symbol, contractType, amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 };
       const description = `Uploaded bot (${file.name}) on ${symbol}.`;
 
-      try {
-        const { data, error } = await supabase.from('trading_bots').insert([{
-          name: botName.trim(),
-          description,
-          strategy,
-          is_public: true
-        }]).select();
-
-        if (!error && data && data.length > 0) {
-          setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
-          alert(`✅ Bot "${botName.trim()}" deployed to Supabase and synced across all devices!`);
-          return;
-        }
-      } catch (err) {
-        console.error('Supabase upload error:', err);
-      }
-
-      // Fallback
-      const fallbackBot: BotItem = {
-        id: `admin-file-${Date.now()}`,
+      const { data, error } = await supabase.from('trading_bots').insert([{
         name: botName.trim(),
         description,
+        strategy,
         is_public: true,
-        strategy
-      };
-      handleSaveLocalBot(fallbackBot);
-      setBots(prev => [fallbackBot, ...prev.filter(b => b.id !== fallbackBot.id)]);
-      alert(`✅ Bot "${botName.trim()}" deployed to client base!`);
+        user_id: adminEmail
+      }]).select();
+
+      if (error) {
+        console.error('[AdminPanel] XML upload error:', error);
+        alert(`❌ Failed to save bot to Supabase:\n\nCode: ${error.code}\nMessage: ${error.message}\n\nMake sure you have run supabase-schema.sql in your Supabase SQL Editor.`);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
+        alert(`✅ Bot "${botName.trim()}" deployed to Supabase and synced across all devices!`);
+      }
     };
 
     if (file.name.toLowerCase().endsWith('.xml')) {
       reader.readAsText(file);
     } else {
-      // Non-XML files
       reader.onload({ target: { result: '' } } as any);
     }
     e.target.value = '';
@@ -213,37 +202,26 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
     };
     const description = newBot.description || 'Custom proprietary strategy deployed by Administrator.';
 
-    try {
-      const { data, error } = await supabase.from('trading_bots').insert([{
-        name: newBot.name.trim(),
-        description,
-        strategy,
-        is_public: true
-      }]).select();
-
-      if (!error && data && data.length > 0) {
-        setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
-        setShowCreator(false);
-        setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 });
-        alert('✅ Custom bot strategy published to Supabase and synced across all devices!');
-        return;
-      }
-    } catch (err) {
-      console.error('Supabase create bot error:', err);
-    }
-
-    const fallbackBot: BotItem = {
-      id: `admin-bot-${Date.now()}`,
+    const { data, error } = await supabase.from('trading_bots').insert([{
       name: newBot.name.trim(),
       description,
+      strategy,
       is_public: true,
-      strategy
-    };
-    handleSaveLocalBot(fallbackBot);
-    setBots(prev => [fallbackBot, ...prev.filter(b => b.id !== fallbackBot.id)]);
-    setShowCreator(false);
-    setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 });
-    alert('✅ Custom bot strategy published to client dashboard!');
+      user_id: adminEmail
+    }]).select();
+
+    if (error) {
+      console.error('[AdminPanel] Create bot error:', error);
+      alert(`❌ Failed to save bot to Supabase:\n\nCode: ${error.code}\nMessage: ${error.message}\n\nMake sure you have run supabase-schema.sql in your Supabase SQL Editor.`);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
+      setShowCreator(false);
+      setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 });
+      alert('✅ Bot deployed to Supabase and visible to all clients!');
+    }
   };
 
   const handleDeleteBot = async (botId: string) => {
