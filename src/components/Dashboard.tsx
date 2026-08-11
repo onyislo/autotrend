@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LogOut, RefreshCw, TrendingUp, BarChart2, Zap,
   ChevronRight, Activity, Menu, X, LayoutDashboard,
-  Copy
+  Copy, History, CheckCircle2, XCircle, Clock
 } from 'lucide-react';
 import AutoBotsPanel from './AutoBotsPanel';
 import ChartsSection from './ChartsSection';
 import { getUserData } from '../lib/finalAuth';
-import { syncDerivUserToSupabase } from '../lib/supabase';
+import { syncDerivUserToSupabase, supabase } from '../lib/supabase';
 
 function Logo({ size = 28 }: { size?: number }) {
   return (
@@ -24,7 +24,7 @@ function Logo({ size = 28 }: { size?: number }) {
   );
 }
 
-type TabId = 'dashboard' | 'freebots' | 'dtrader' | 'quickbot' | 'autotrade' | 'signalai' | 'copytrader' | 'charts';
+type TabId = 'dashboard' | 'freebots' | 'tradehistory' | 'quickbot' | 'autotrade' | 'signalai' | 'copytrader' | 'charts';
 
 interface Signal {
   id: number; market: string; symbol: string; type: string;
@@ -45,7 +45,7 @@ interface SessionData {
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
   { id: 'freebots', label: 'Free Bots', icon: <Zap size={16} /> },
-  { id: 'dtrader', label: 'D-Trader', icon: <TrendingUp size={16} /> },
+  { id: 'tradehistory', label: 'Trade History', icon: <History size={16} /> },
   { id: 'quickbot', label: 'Quick Bot', icon: <Activity size={16} /> },
   { id: 'autotrade', label: 'Auto Trade', icon: <RefreshCw size={16} /> },
   { id: 'signalai', label: 'Signal AI', icon: <BarChart2 size={16} /> },
@@ -228,6 +228,158 @@ function FreeBotsPanel({ wsToken, wsUrl, adminEmail, userId }: { wsToken?: strin
   );
 }
 
+// ── Trade History ─────────────────────────────────────────────────────────────
+
+interface TradeRecord {
+  id: string;
+  symbol: string;
+  contract_type: string;
+  amount: number;
+  profit_loss: number | null;
+  status: string;
+  deriv_contract_id: string | null;
+  created_at: string;
+}
+
+function TradeHistoryPanel({ userId }: { userId?: string | null }) {
+  const [trades, setTrades] = useState<TradeRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'win' | 'loss'>('all');
+
+  useEffect(() => {
+    const fetchTrades = async () => {
+      setLoading(true);
+      try {
+        let query = supabase
+          .from('trades')
+          .select('id, symbol, contract_type, amount, profit_loss, status, deriv_contract_id, created_at')
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (userId) query = query.eq('user_id', userId);
+        const { data, error } = await query;
+        if (!error && data) setTrades(data as TradeRecord[]);
+      } catch { /* ignore */ }
+      setLoading(false);
+    };
+    fetchTrades();
+  }, [userId]);
+
+  const filtered = trades.filter(t => {
+    if (filter === 'win') return (t.profit_loss ?? 0) > 0;
+    if (filter === 'loss') return (t.profit_loss ?? 0) <= 0;
+    return true;
+  });
+
+  const totalPnL = trades.reduce((s, t) => s + (t.profit_loss ?? 0), 0);
+  const wins = trades.filter(t => (t.profit_loss ?? 0) > 0).length;
+  const losses = trades.filter(t => (t.profit_loss ?? 0) <= 0).length;
+
+  const fmt = (v: number) => (v >= 0 ? '+' : '') + v.toFixed(2);
+
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-bold text-gray-900">Trade History</h2>
+        <p className="text-xs text-gray-500 mt-0.5">All trades executed by your bots</p>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Trades', value: trades.length, icon: <History size={16} className="text-blue-500" />, color: 'text-gray-900' },
+          { label: 'Wins', value: wins, icon: <CheckCircle2 size={16} className="text-emerald-500" />, color: 'text-emerald-600' },
+          { label: 'Losses', value: losses, icon: <XCircle size={16} className="text-red-500" />, color: 'text-red-500' },
+          { label: 'Net P/L', value: `$${fmt(totalPnL)}`, icon: <TrendingUp size={16} className={totalPnL >= 0 ? 'text-emerald-500' : 'text-red-500'} />, color: totalPnL >= 0 ? 'text-emerald-600' : 'text-red-500' },
+        ].map(s => (
+          <div key={s.label} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-400 font-medium">{s.label}</span>
+              {s.icon}
+            </div>
+            <p className={`text-xl font-bold font-mono ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter Pills */}
+      <div className="flex gap-2">
+        {(['all', 'win', 'loss'] as const).map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold capitalize transition-all ${
+              filter === f
+                ? 'bg-emerald-500 text-white shadow-sm'
+                : 'bg-white border border-gray-200 text-gray-500 hover:border-emerald-300'
+            }`}
+          >
+            {f === 'all' ? 'All Trades' : f === 'win' ? '✅ Wins' : '❌ Losses'}
+          </button>
+        ))}
+      </div>
+
+      {/* Trade Table */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-gray-400 gap-2">
+            <Clock size={18} className="animate-spin" />
+            <span className="text-sm">Loading trades...</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 space-y-2">
+            <p className="text-2xl">📭</p>
+            <p className="font-bold text-gray-700 text-sm">No trades yet</p>
+            <p className="text-gray-400 text-xs">Trades will appear here once your bot runs.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  {['Time', 'Symbol', 'Type', 'Stake', 'P/L', 'Status'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtered.map(t => {
+                  const pnl = t.profit_loss ?? 0;
+                  const isWin = pnl > 0;
+                  return (
+                    <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                        {new Date(t.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td className="px-4 py-3 font-mono font-bold text-gray-800">{t.symbol}</td>
+                      <td className="px-4 py-3">
+                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-semibold">{t.contract_type}</span>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-gray-700">${Number(t.amount).toFixed(2)}</td>
+                      <td className={`px-4 py-3 font-bold font-mono ${isWin ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {fmt(pnl)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          t.status === 'closed'
+                            ? isWin ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {t.status === 'closed' ? (isWin ? '✅ Won' : '❌ Lost') : '⏳ Open'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface DashboardProps {
   adminEmail?: string;
 }
@@ -333,7 +485,7 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
 
   const TOOL_CARDS = [
     { id: 'freebots' as TabId, icon: <Zap size={24} />, title: 'Free Bots', desc: 'Load & run automated strategies' },
-    { id: 'dtrader' as TabId, icon: <TrendingUp size={24} />, title: 'D-Trader', desc: 'Manual options & accumulators' },
+    { id: 'tradehistory' as TabId, icon: <History size={24} />, title: 'Trade History', desc: 'View all bot trade logs' },
     { id: 'charts' as TabId, icon: <BarChart2 size={24} />, title: 'Charts', desc: 'Live Deriv SmartCharts' },
     { id: 'autotrade' as TabId, icon: <Activity size={24} />, title: 'Auto Trade', desc: 'Automated trading engine' },
   ];
@@ -638,6 +790,10 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
 
           {activeTab === 'freebots' && (
             <FreeBotsPanel wsToken={session?.wsToken} wsUrl={session?.wsUrl} adminEmail={adminEmail} userId={currentAccountId} />
+          )}
+
+          {activeTab === 'tradehistory' && (
+            <TradeHistoryPanel userId={currentAccountId} />
           )}
 
           {/* Charts — 100% native canvas live chart */}
