@@ -118,58 +118,8 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
 
   const loadBots = async () => {
     const list: Bot[] = [];
-    
-    // Check if user loaded AUTOTRENDX BOT from Free Bots tab
-    try {
-      const loadedName = localStorage.getItem('autotrendx_loaded_bot_name');
-      const loadedSymbol = localStorage.getItem('autotrendx_loaded_symbol') || 'R_50';
-      if (loadedName) {
-        list.push({
-          id: 'loaded-autotrendx-bot',
-          name: loadedName,
-          description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses.",
-          is_public: true,
-          strategy: {
-            symbol: loadedSymbol,
-            contractType: 'DIGITDIFF',
-            amount: 1,
-            duration: 1,
-            martingale: true,
-            martingaleMultiplier: 2,
-            maxMartingaleSteps: 4,
-            stopLoss: 20,
-            takeProfit: 40,
-          }
-        });
-      }
-    } catch {}
 
-    const defaultSystemBots: Bot[] = [
-      {
-        id: 'default-autotrendx-v50',
-        name: 'AUTOTRENDX BOT (V50 Digits)',
-        description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses.",
-        is_public: true,
-        strategy: {
-          symbol: 'R_50',
-          contractType: 'DIGITDIFF',
-          amount: 1,
-          duration: 1,
-          martingale: true,
-          martingaleMultiplier: 2,
-          maxMartingaleSteps: 4,
-          stopLoss: 20,
-          takeProfit: 40,
-        }
-      }
-    ];
-
-    defaultSystemBots.forEach(db => {
-      if (!list.some(b => b.id === db.id || b.name === db.name)) {
-        list.push(db);
-      }
-    });
-
+    // Load bots from Supabase (admin-published bots)
     try {
       const { data, error } = await supabase
         .from('trading_bots')
@@ -602,24 +552,11 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
         </div>
 
         {bots.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center space-y-4 shadow-sm">
-            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto text-emerald-600 font-bold text-xl">
+        <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center space-y-3 shadow-sm">
+            <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto text-2xl">
               🤖
             </div>
-            <div>
-              <h4 className="font-bold text-gray-900 text-base mb-1">No Bot Loaded in Bot Builder</h4>
-              <p className="text-gray-500 text-xs max-w-md mx-auto">
-                Upload a <span className="font-bold text-emerald-600">.XML bot file</span> above or load a pre-built strategy from Free Bots.
-              </p>
-            </div>
-            {onGoToFreeBots && (
-              <button
-                onClick={onGoToFreeBots}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition-all shadow-sm"
-              >
-                Go to Free Bots
-              </button>
-            )}
+            <h4 className="font-bold text-gray-800 text-base">No bots at the moment</h4>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
