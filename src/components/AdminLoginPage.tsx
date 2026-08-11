@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Shield, Eye, EyeOff, Lock, LogIn } from 'lucide-react';
 
-const ADMIN_EMAIL = 'admin@autotrendx.com';
+const ADMIN_EMAIL = 'admin@autotrendx.co.ke';
 const ADMIN_PASSWORD = '127811';
 const ADMIN_SESSION_KEY = 'autotrendx_admin_session';
 
@@ -87,7 +87,7 @@ export default function AdminLoginPage({ onSuccess }: AdminLoginPageProps) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@autotrendx.com"
+                placeholder="admin@autotrendx.co.ke"
                 required
                 autoComplete="email"
                 className="w-full bg-gray-800 border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 outline-none transition-all"

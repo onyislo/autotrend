@@ -101,7 +101,7 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
   const runningBotIdRef = useRef<string | null>(null);
   
   // Check if current user is admin
-  const isAdmin = userEmail === 'admin@autotrendx.com';
+  const isAdmin = userEmail === 'admin@autotrendx.co.ke';
 
   useEffect(() => {
     loadBots();
@@ -151,40 +151,6 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
           maxMartingaleSteps: 4,
           stopLoss: 20,
           takeProfit: 40,
-        }
-      },
-      {
-        id: 'default-v75-scalper',
-        name: 'V75 Martingale Scalper',
-        description: 'High-frequency Rise strategy on Volatility 75 with automated Martingale stake recovery.',
-        is_public: true,
-        strategy: {
-          symbol: 'R_75',
-          contractType: 'CALL',
-          amount: 1,
-          duration: 1,
-          martingale: true,
-          martingaleMultiplier: 2,
-          maxMartingaleSteps: 3,
-          stopLoss: 25,
-          takeProfit: 50,
-        }
-      },
-      {
-        id: 'default-digit-differ',
-        name: 'Digit Differ Pro (V100)',
-        description: 'Calculates high-probability digit differ contracts on Volatility 100.',
-        is_public: true,
-        strategy: {
-          symbol: 'R_100',
-          contractType: 'DIGITDIFF',
-          amount: 1,
-          duration: 1,
-          martingale: true,
-          martingaleMultiplier: 2,
-          maxMartingaleSteps: 5,
-          stopLoss: 30,
-          takeProfit: 60,
         }
       }
     ];

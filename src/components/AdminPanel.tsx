@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Upload, Plus, Trash2, Users, Bot, Settings,
-  LogOut, Activity, Database, CheckCircle2,
+  LogOut, Database, CheckCircle2,
   AlertTriangle, RefreshCw, Eye, Sparkles, Zap,
-  TrendingUp, TrendingDown, Server, Lock, Wifi,
-  BarChart2, Globe, Power, AlertCircle, Edit3
+  TrendingUp, TrendingDown, Server, Lock,
+  BarChart2, Globe, Power, AlertCircle,
+  Menu, X
 } from 'lucide-react';
 import { SYNTHETIC_INDICES } from '../lib/derivAPI';
 import { supabase } from '../lib/supabase';
@@ -37,46 +38,12 @@ interface AdminPanelProps {
   onLogout: () => void;
 }
 
-const statCards = [
-  {
-    label: 'Total Deployed Bots',
-    valueKey: 'bots',
-    icon: <Bot size={20} />,
-    color: 'emerald',
-    suffix: '',
-    note: 'Available to all clients'
-  },
-  {
-    label: 'Active Client Sessions',
-    value: '142',
-    icon: <Wifi size={20} />,
-    color: 'sky',
-    suffix: '',
-    note: 'Live WebSocket connections'
-  },
-  {
-    label: 'Deriv API Status',
-    value: 'Operational',
-    icon: <Server size={20} />,
-    color: 'violet',
-    suffix: '',
-    note: 'All endpoints responding'
-  },
-  {
-    label: 'System Uptime',
-    value: '99.97%',
-    icon: <Activity size={20} />,
-    color: 'amber',
-    suffix: '',
-    note: 'Last 30 days average'
-  },
-];
-
-export default function AdminPanel({ adminEmail = 'admin@autotrendx.com', onLogout }: AdminPanelProps) {
+export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLogout }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'bots' | 'clients' | 'settings'>('overview');
   const [bots, setBots] = useState<BotItem[]>([]);
   const [showCreator, setShowCreator] = useState(false);
   const [selectedBot, setSelectedBot] = useState<BotItem | null>(null);
+  const [hamburgerOpen, setHamburgerOpen] = useState(false);
   const tickRef = useRef(0);
 
   const [newBot, setNewBot] = useState({
@@ -132,20 +99,6 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.com', onLogo
         description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses.",
         is_public: true,
         strategy: { symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 }
-      },
-      {
-        id: 'default-v75-scalper',
-        name: 'V75 Martingale Scalper',
-        description: 'High-frequency Rise strategy on Volatility 75 with automated Martingale stake recovery.',
-        is_public: true,
-        strategy: { symbol: 'R_75', contractType: 'CALL', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 3, stopLoss: 25, takeProfit: 50 }
-      },
-      {
-        id: 'default-digit-differ',
-        name: 'Digit Differ Pro (V100)',
-        description: 'Calculates high-probability digit differ contracts on Volatility 100.',
-        is_public: true,
-        strategy: { symbol: 'R_100', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 5, stopLoss: 30, takeProfit: 60 }
       }
     ];
 
@@ -186,11 +139,11 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.com', onLogo
     } catch {}
   };
 
-  const handleXmlUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleXmlUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       const xmlContent = evt.target?.result as string;
       if (!xmlContent) return;
       const symbolMatch = xmlContent.match(/<field name="SYMBOL_LIST">(.*?)<\/field>/);
@@ -206,6 +159,9 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.com', onLogo
         strategy: { symbol, contractType, amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 }
       };
       handleSaveLocalBot(createdBot);
+      try {
+        await supabase.from('trading_bots').insert([{ id: createdBot.id, name: createdBot.name, description: createdBot.description, strategy: createdBot.strategy, is_public: true }]);
+      } catch {}
       setBots(prev => [createdBot, ...prev.filter(b => b.id !== createdBot.id)]);
       alert(`✅ Bot template "${botName}" deployed to client base!`);
     };
@@ -344,13 +300,6 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.com', onLogo
     { id: 'settings', label: 'System Config', icon: <Settings size={15} /> },
   ] as const;
 
-  const colorMap: Record<string, string> = {
-    emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25',
-    sky: 'text-sky-400 bg-sky-500/10 border-sky-500/25',
-    violet: 'text-violet-400 bg-violet-500/10 border-violet-500/25',
-    amber: 'text-amber-400 bg-amber-500/10 border-amber-500/25',
-  };
-
   return (
     <div className="min-h-screen text-gray-100 font-sans" style={{ background: 'linear-gradient(135deg, #060912 0%, #0b1120 50%, #060912 100%)' }}>
       {/* ── TOP ADMIN BAR ────────────────────────────────────── */}
@@ -373,8 +322,8 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.com', onLogo
             </div>
           </div>
 
-          {/* Center tabs */}
-          <nav className="hidden md:flex items-center gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          {/* Center tabs (Desktop) */}
+          <nav className="hidden lg:flex items-center gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
             {TABS.map(tab => (
               <button
                 key={tab.id}
@@ -387,36 +336,72 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.com', onLogo
             ))}
           </nav>
 
-          {/* Right controls */}
+          {/* Right controls & Hamburger Button */}
           <div className="flex items-center gap-2">
             {settings.maintenanceMode && (
               <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase" style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
                 <AlertCircle size={10} className="animate-pulse" /> Maintenance ON
               </span>
             )}
-            <a href="/dashboard" target="_blank" rel="noreferrer"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-gray-400 hover:text-gray-200"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <Eye size={13} /> Client View
-            </a>
-            <button onClick={onLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all"
-              style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
-              <LogOut size={13} /> Exit
+            
+            {/* Hamburger Button */}
+            <button
+              onClick={() => setHamburgerOpen(!hamburgerOpen)}
+              className="flex items-center justify-center p-2 rounded-xl text-gray-300 hover:text-white transition-all border border-white/10 hover:border-emerald-500/40 hover:bg-white/5"
+              title="Admin Menu"
+            >
+              {hamburgerOpen ? <X size={20} className="text-emerald-400" /> : <Menu size={20} />}
             </button>
           </div>
         </div>
 
-        {/* Mobile tab bar */}
-        <div className="md:hidden flex border-t border-white/5">
-          {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[9px] font-bold transition-all ${activeTab === tab.id ? 'text-emerald-400' : 'text-gray-500'}`}>
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {/* ── HAMBURGER NAVIGATION DRAWER / MENU ────────────────── */}
+        <AnimatePresence>
+          {hamburgerOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="border-t border-white/10 overflow-hidden"
+              style={{ background: 'rgba(10, 15, 29, 0.98)' }}
+            >
+              <div className="max-w-screen-2xl mx-auto px-6 py-4 space-y-3">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400/80 mb-2">Admin Navigation</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {TABS.map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => { setActiveTab(tab.id); setHamburgerOpen(false); }}
+                      className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border ${activeTab === tab.id ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' : 'bg-white/5 text-gray-300 border-white/5 hover:bg-white/10 hover:text-white'}`}
+                    >
+                      {tab.icon}
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                  <a
+                    href="/dashboard"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all"
+                  >
+                    <Eye size={14} /> Open Client View
+                  </a>
+
+                  {/* LOGOUT BUTTON IN HAMBURGER */}
+                  <button
+                    onClick={() => { setHamburgerOpen(false); onLogout(); }}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 hover:border-red-500/50"
+                  >
+                    <LogOut size={14} /> Logout Admin Session
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       <div className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
