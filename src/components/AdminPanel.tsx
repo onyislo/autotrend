@@ -345,6 +345,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
             </button>
           </div>
         </div>
+      </header>
 
       {/* ── HAMBURGER NAVIGATION SIDEBAR DRAWER (OPENS FROM LEFT) ────────────────── */}
       <AnimatePresence>
@@ -432,7 +433,6 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
           </>
         )}
       </AnimatePresence>
-      </header>
 
       <div className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
 
