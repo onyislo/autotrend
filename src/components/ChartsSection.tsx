@@ -431,7 +431,6 @@ export default function ChartsSection({ wsToken }: Props) {
           adjust_start_time: 1,
           count:             HISTORY_COUNT,
           end:               'latest',
-          start:             1,
           style:             'ticks',
         }));
 
@@ -452,10 +451,14 @@ export default function ChartsSection({ wsToken }: Props) {
         }
 
         if (data.error) {
-          console.error(`[AutoTrendX] Deriv Broker error: ${data.error.code} - ${data.error.message}`);
-          setStatus('error');
-          setErrorMsg(`[${data.error.code}] ${data.error.message}`);
-          return;
+          if (data.msg_type === 'authorize' || data.error?.code === 'InvalidToken') {
+            console.warn('[AutoTrendX] Chart auth bypassed for public stream:', data.error.message);
+          } else {
+            console.error(`[AutoTrendX] Deriv Broker error: ${data.error.code} - ${data.error.message}`);
+            setStatus('error');
+            setErrorMsg(`[${data.error.code}] ${data.error.message}`);
+            return;
+          }
         }
 
         if (data.msg_type === 'history' && data.history) {

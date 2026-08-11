@@ -40,6 +40,7 @@ export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props)
 
     ws.onopen = () => {
       setStatus('live');
+      ws.send(JSON.stringify({ ticks_history: symbol, count: MAX_TICKS, end: 'latest', style: 'ticks' }));
       ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
     };
 
@@ -56,10 +57,26 @@ export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props)
       try {
         const msg = JSON.parse(event.data as string);
         if (msg.error) {
-          console.error('Deriv Chart API Error:', msg.error);
-          setStatus('error');
-          setErrorMessage(msg.error.message || 'API request rejected.');
-          return;
+          if (msg.msg_type === 'authorize' || msg.error?.code === 'InvalidToken') {
+            console.warn('Deriv Chart auth bypassed:', msg.error.message);
+          } else {
+            console.error('Deriv Chart API Error:', msg.error);
+            setStatus('error');
+            setErrorMessage(msg.error.message || 'API request rejected.');
+            return;
+          }
+        }
+        if (msg.msg_type === 'history' && msg.history) {
+          const { prices, times } = msg.history;
+          if (Array.isArray(prices) && prices.length > 0) {
+            const initialTicks = prices.map((p: number, i: number) => ({ price: p, time: times[i] }));
+            setTicks(initialTicks.slice(-MAX_TICKS));
+            const last = prices[prices.length - 1];
+            setCurrentPrice(last);
+            if (prices.length >= 2) {
+              setChange(((last - prices[0]) / prices[0]) * 100);
+            }
+          }
         }
         if (msg.tick) {
           const price = msg.tick.quote as number;
