@@ -788,16 +788,19 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
             </div>
           )}
 
-          {activeTab === 'freebots' && (
+          {/* Free Bots — Keep mounted but hidden so the trading loops and states are not lost when switching tabs */}
+          <div className={activeTab === 'freebots' ? 'block' : 'hidden'}>
             <FreeBotsPanel wsToken={session?.wsToken} wsUrl={session?.wsUrl} adminEmail={adminEmail} userId={currentAccountId} />
-          )}
+          </div>
 
           {activeTab === 'tradehistory' && (
             <TradeHistoryPanel userId={currentAccountId} />
           )}
 
-          {/* Charts — 100% native canvas live chart */}
-          {activeTab === 'charts' && <ChartsSection wsToken={session?.wsToken} wsUrl={session?.wsUrl} />}
+          {/* Charts — Keep mounted but hidden so we don't lose live ticks and canvas drawings */}
+          <div className={activeTab === 'charts' ? 'block h-[calc(100vh-3.5rem)] flex flex-col' : 'hidden'}>
+            <ChartsSection wsToken={session?.wsToken} wsUrl={session?.wsUrl} />
+          </div>
 
           {['quickbot', 'autotrade', 'copytrader'].includes(activeTab) && (
             <div className="flex flex-col items-center justify-center py-24 text-center max-w-7xl mx-auto">

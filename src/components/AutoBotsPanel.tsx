@@ -394,19 +394,22 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Admin Panel Actions */}
       {isAdmin && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-900/20 via-emerald-800/10 to-transparent border border-emerald-500/30 rounded-2xl p-6 shadow-lg shadow-emerald-950/10">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
             <div>
-              <h3 className="font-bold text-emerald-900 text-lg">👑 Admin Bot Manager Panel</h3>
-              <p className="text-emerald-700 text-xs mt-1">
-                You are signed in as the Administrator. Design, upload, and deploy proprietary bot templates for your clients.
+              <div className="flex items-center gap-2">
+                <span className="text-xl">👑</span>
+                <h3 className="font-extrabold text-gray-900 text-lg tracking-tight">Admin Strategy Deployer</h3>
+              </div>
+              <p className="text-gray-500 text-xs mt-1 max-w-xl leading-relaxed">
+                As an Administrator, you can upload new bot files or create custom automated trading algorithms that deploy instantly to all client terminals.
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {/* Admin File Upload — any file type */}
+            <div className="flex flex-wrap items-center gap-3">
               <input
                 type="file"
                 accept="*"
@@ -415,7 +418,6 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  // For XML files, try to extract symbol/contract; otherwise use defaults
                   const isXml = file.name.toLowerCase().endsWith('.xml');
                   if (isXml) {
                     const reader = new FileReader();
@@ -425,7 +427,6 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                       const purchaseMatch = xmlContent?.match(/<field name="PURCHASE_LIST">(.*?)<\/field>/);
                       const symbol = symbolMatch ? symbolMatch[1] : 'R_50';
                       const contractType = purchaseMatch ? purchaseMatch[1] : 'DIGITDIFF';
-                      // Pre-fill suggested name but let admin rename
                       const suggested = file.name.replace(/\.xml$/i, '').toUpperCase();
                       setUploadBotName(suggested);
                       setUploadBotDesc(`Uploaded bot on ${symbol}.`);
@@ -433,27 +434,25 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                     };
                     reader.readAsText(file);
                   } else {
-                    // Non-XML: open naming modal with defaults
                     const suggested = file.name.replace(/\.[^.]+$/, '').toUpperCase();
                     setUploadBotName(suggested);
                     setUploadBotDesc('');
                     setPendingUpload({ symbol: 'R_50', contractType: 'DIGITDIFF', fileName: file.name });
                   }
-                  // Reset input so same file can be re-selected
                   e.target.value = '';
                 }}
               />
               <label
                 htmlFor="admin-xml-upload"
-                className="flex items-center gap-2 bg-white border border-emerald-400 text-emerald-700 hover:bg-emerald-100 font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm text-sm cursor-pointer"
+                className="flex items-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 hover:text-gray-900 font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm text-xs cursor-pointer active:scale-95"
               >
-                <Upload size={15} /> Upload Bot File
+                <Upload size={14} className="text-gray-500" /> Upload File (.XML)
               </label>
               <button
                 onClick={() => setShowCreator(true)}
-                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm text-sm"
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-md shadow-emerald-500/20 text-xs"
               >
-                <Plus size={15} /> Create Bot
+                <Plus size={14} /> Create Strategy
               </button>
             </div>
           </div>
@@ -464,177 +463,200 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
       <AnimatePresence>
         {runningBotId && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-gray-900 rounded-2xl border border-gray-800 p-6 shadow-xl text-white space-y-6"
+            initial={{ opacity: 0, scale: 0.98, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: -10 }}
+            className="bg-slate-950 rounded-2xl border border-slate-800 p-6 shadow-2xl text-white space-y-6 relative overflow-hidden"
           >
-            <div className="flex justify-between items-center border-b border-gray-800 pb-4">
-              <div className="flex items-center gap-3">
-                <Cpu size={24} className="text-emerald-400 animate-pulse" />
+            {/* Pulse glow grid background */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" />
+
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-800 pb-4 relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center relative">
+                  <Cpu size={22} className="text-emerald-400 animate-pulse" />
+                  <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+                  </span>
+                </div>
                 <div>
-                  <h3 className="font-bold text-lg">
+                  <h3 className="font-extrabold text-lg tracking-tight">
                     {bots.find(b => b.id === runningBotId)?.name}
                   </h3>
-                  <span className="text-xs text-emerald-400 font-medium tracking-wider uppercase">
-                    🟢 Bot running on your account
+                  <span className="text-[10px] font-mono tracking-widest text-emerald-400 uppercase flex items-center gap-1.5 mt-0.5">
+                    Live Session Active
                   </span>
                 </div>
               </div>
               <button
                 onClick={stopBot}
-                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-xl transition-all shadow-md text-sm"
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg shadow-red-500/10 hover:shadow-red-500/20 text-xs active:scale-95 self-start sm:self-auto"
               >
-                <Pause size={14} /> Stop Bot
+                <Pause size={14} /> Kill Execution
               </button>
             </div>
 
             {/* Live Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
               {[
-                { label: 'Total Trades', value: stats.totalTrades, icon: History, color: 'text-blue-400' },
-                { label: 'Wins', value: stats.wins, icon: TrendingUp, color: 'text-green-400' },
-                { label: 'Losses', value: stats.losses, icon: ShieldAlert, color: 'text-red-400' },
+                { label: 'Total Trades', value: stats.totalTrades, icon: History, color: 'text-blue-400', bg: 'bg-blue-500/5 border-blue-500/10' },
+                { label: 'Wins Count', value: stats.wins, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
+                { label: 'Losses Count', value: stats.losses, icon: ShieldAlert, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10' },
                 {
-                  label: 'Net Profit/Loss',
-                  value: `$${stats.netProfit.toFixed(2)}`,
+                  label: 'Net P&L',
+                  value: `${stats.netProfit >= 0 ? '+' : ''}$${stats.netProfit.toFixed(2)}`,
                   icon: BarChart3,
-                  color: stats.netProfit >= 0 ? 'text-green-400' : 'text-red-400'
+                  color: stats.netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400',
+                  bg: stats.netProfit >= 0 ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'
                 }
               ].map((stat) => (
-                <div key={stat.label} className="bg-gray-950 rounded-xl border border-gray-800 p-4">
+                <div key={stat.label} className={`rounded-xl border p-4 transition-all ${stat.bg}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-500 font-medium">{stat.label}</span>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{stat.label}</span>
                     <stat.icon size={16} className={stat.color} />
                   </div>
-                  <p className={`text-xl font-bold font-mono ${stat.color}`}>{stat.value}</p>
+                  <p className={`text-2xl font-black font-mono tracking-tight ${stat.color}`}>{stat.value}</p>
                 </div>
               ))}
             </div>
 
             {/* Live Console Logs */}
-            <div className="bg-black rounded-xl border border-gray-800 p-4 h-60 overflow-y-auto font-mono text-xs space-y-2">
-              {logs.map((log, index) => (
-                <div
-                  key={index}
-                  className={`flex gap-2 ${
-                    log.type === 'success' ? 'text-green-400' :
-                    log.type === 'error' ? 'text-red-400' :
-                    log.type === 'warning' ? 'text-yellow-400' : 'text-gray-300'
-                  }`}
-                >
-                  <span className="text-gray-600 shrink-0">[{log.time}]</span>
-                  <span>{log.text}</span>
-                </div>
-              ))}
-              {logs.length === 0 && (
-                <div className="text-gray-500 text-center py-10">Starting execution logs...</div>
-              )}
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-2 text-slate-500 text-xs px-1 font-bold font-mono">
+                <span>TERMINAL STREAMS</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> ONLINE</span>
+              </div>
+              <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 h-60 overflow-y-auto font-mono text-xs space-y-2.5 shadow-inner">
+                {logs.map((log, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-start gap-2.5 leading-relaxed ${
+                      log.type === 'success' ? 'text-emerald-400' :
+                      log.type === 'error' ? 'text-rose-400' :
+                      log.type === 'warning' ? 'text-amber-400' : 'text-slate-300'
+                    }`}
+                  >
+                    <span className="text-slate-500 shrink-0 select-none">[{log.time}]</span>
+                    <span className="flex-1">{log.text}</span>
+                  </div>
+                ))}
+                {logs.length === 0 && (
+                  <div className="text-slate-500 text-center py-16 flex flex-col items-center justify-center gap-2">
+                    <span className="w-6 h-6 border-2 border-slate-600 border-t-emerald-400 rounded-full animate-spin" />
+                    <span>Booting system logs... awaiting first API handshake</span>
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Available bots card grid */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="font-bold text-gray-900 text-lg">Available Trading Bots</h3>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Click Start Bot to activate the strategy algorithm on your own account session.
+      <div className="space-y-6">
+        <div className="border-b border-gray-100 pb-4">
+          <h3 className="font-extrabold text-gray-900 text-xl tracking-tight">Strategy Repository</h3>
+          <p className="text-gray-500 text-xs mt-1 leading-relaxed">
+            Choose an automated strategy configuration below. Click "Start Auto Bot" to launch its micro-trading sequence within your session sandbox.
           </p>
         </div>
 
         {bots.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center space-y-3 shadow-sm">
-            <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+          <div className="bg-white border border-gray-200 rounded-2xl p-16 text-center space-y-3 shadow-sm max-w-lg mx-auto">
+            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto text-3xl shadow-inner">
               🤖
             </div>
-            <h4 className="font-bold text-gray-800 text-base">No bots at the moment</h4>
+            <h4 className="font-bold text-gray-800 text-base">No active bot templates</h4>
+            <p className="text-xs text-gray-400">Deploy a bot from the Admin Console to show it here.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {bots.map((bot) => (
-            <div
-              key={bot.id}
-              className={`bg-white border rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${
-                runningBotId === bot.id ? 'ring-2 ring-emerald-500 border-emerald-300' : 'border-gray-200'
-              }`}
-            >
-              <div className="space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-bold text-gray-800 text-base">{bot.name}</h4>
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold uppercase mt-1 inline-block">
-                      Proprietary Bot
-                    </span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {bots.map((bot) => {
+              const isThisBotRunning = runningBotId === bot.id;
+              return (
+                <div
+                  key={bot.id}
+                  className={`bg-white border rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden group ${
+                    isThisBotRunning ? 'ring-2 ring-emerald-500 border-emerald-400' : 'border-gray-200'
+                  }`}
+                >
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-extrabold text-gray-800 text-base group-hover:text-emerald-600 transition-colors">{bot.name}</h4>
+                        <span className="text-[9px] bg-emerald-50 border border-emerald-200/50 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase mt-1.5 inline-block tracking-wider">
+                          AutoTrendX Pro
+                        </span>
+                      </div>
+                      {!bot.id.startsWith('default-') && (
+                        <button
+                          onClick={() => deleteBot(bot.id)}
+                          className="text-gray-400 hover:text-rose-500 p-1.5 hover:bg-gray-50 rounded-xl transition-all active:scale-95"
+                          title="Delete Bot"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="text-gray-600 text-xs leading-relaxed font-medium">{bot.description}</p>
+
+                    {/* Strategy overview parameters */}
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 grid grid-cols-3 gap-y-4 gap-x-2 text-center text-[10px] text-gray-500">
+                      <div>
+                        <span className="block text-gray-400 mb-0.5 font-bold uppercase tracking-wider">Asset Market</span>
+                        <span className="font-extrabold text-gray-800 font-mono text-xs">
+                          {Object.keys(SYNTHETIC_INDICES).find(
+                            (k) => SYNTHETIC_INDICES[k as keyof typeof SYNTHETIC_INDICES] === bot.strategy.symbol
+                          )?.replace(' Index', '') || bot.strategy.symbol}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 mb-0.5 font-bold uppercase tracking-wider">Base Stake</span>
+                        <span className="font-extrabold text-gray-800 text-xs">${bot.strategy.amount}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 mb-0.5 font-bold uppercase tracking-wider">Contract</span>
+                        <span className="font-extrabold text-emerald-600 text-xs">{bot.strategy.contractType}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 mb-0.5 font-bold uppercase tracking-wider">Martingale</span>
+                        <span className="font-extrabold text-gray-800 text-xs">{bot.strategy.martingale ? `${bot.strategy.martingaleMultiplier}x` : 'Off'}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 mb-0.5 font-bold uppercase tracking-wider">Stop Loss</span>
+                        <span className="font-extrabold text-rose-500 text-xs">${bot.strategy.stopLoss}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 mb-0.5 font-bold uppercase tracking-wider">Take Profit</span>
+                        <span className="font-extrabold text-emerald-500 text-xs">${bot.strategy.takeProfit}</span>
+                      </div>
+                    </div>
                   </div>
-                  {!bot.id.startsWith('default-') && (
-                    <button
-                      onClick={() => deleteBot(bot.id)}
-                      className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
-                      title="Delete Bot"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
+
+                  <div className="mt-6">
+                    {isThisBotRunning ? (
+                      <button
+                        onClick={stopBot}
+                        className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-500/10 active:scale-95"
+                      >
+                        Terminate Execution
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => startBot(bot)}
+                        disabled={!!runningBotId}
+                        className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-500/15 active:scale-95"
+                      >
+                        Start Auto Bot
+                      </button>
+                    )}
+                  </div>
                 </div>
-
-                <p className="text-xs text-gray-600 leading-relaxed">{bot.description}</p>
-
-                {/* Strategy overview parameters */}
-                <div className="bg-gray-50 rounded-xl p-3 grid grid-cols-3 gap-2 text-center text-[10px] text-gray-600">
-                  <div>
-                    <span className="block text-gray-400 mb-0.5">Market</span>
-                    <span className="font-bold font-mono">
-                      {Object.keys(SYNTHETIC_INDICES).find(
-                        (k) => SYNTHETIC_INDICES[k as keyof typeof SYNTHETIC_INDICES] === bot.strategy.symbol
-                      )?.replace(' Index', '') || bot.strategy.symbol}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-gray-400 mb-0.5">Base Stake</span>
-                    <span className="font-bold text-gray-900">${bot.strategy.amount}</span>
-                  </div>
-                  <div>
-                    <span className="block text-gray-400 mb-0.5">Contract</span>
-                    <span className="font-bold text-emerald-600">{bot.strategy.contractType}</span>
-                  </div>
-                  <div>
-                    <span className="block text-gray-400 mb-0.5">Martingale</span>
-                    <span className="font-bold text-gray-900">{bot.strategy.martingale ? `${bot.strategy.martingaleMultiplier}x` : 'Off'}</span>
-                  </div>
-                  <div>
-                    <span className="block text-gray-400 mb-0.5">Stop Loss</span>
-                    <span className="font-bold text-red-500">${bot.strategy.stopLoss}</span>
-                  </div>
-                  <div>
-                    <span className="block text-gray-400 mb-0.5">Take Profit</span>
-                    <span className="font-bold text-green-600">${bot.strategy.takeProfit}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                {runningBotId === bot.id ? (
-                  <button
-                    onClick={stopBot}
-                    className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                  >
-                    Stop Bot
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => startBot(bot)}
-                    disabled={!!runningBotId}
-                    className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-xl text-xs font-bold transition-all shadow-sm"
-                  >
-                    Start Auto Bot
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
