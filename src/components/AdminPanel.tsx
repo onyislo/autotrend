@@ -93,15 +93,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
   }, []);
 
   const loadAdminBots = async () => {
-    const list: BotItem[] = [
-      {
-        id: 'default-autotrendx-v50',
-        name: 'AUTOTRENDX BOT (V50 Digits)',
-        description: "D'Alembert strategy on Volatility 50 (Digits). Auto-adjusts stake on wins/losses.",
-        is_public: true,
-        strategy: { symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 }
-      }
-    ];
+    const list: BotItem[] = [];
 
     try {
       const raw = localStorage.getItem('autotrendx_admin_bots');
