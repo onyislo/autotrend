@@ -117,18 +117,30 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
   }, []);
 
   const loadBots = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('trading_bots')
-        .select('*')
-        .eq('is_public', true)
-        .order('created_at', { ascending: false });
-      
-      if (!error && data) {
-        setBots(data);
+    const { data, error } = await supabase
+      .from('trading_bots')
+      .select('*')
+      .eq('is_public', true)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[AutoTrendX] trading_bots fetch error:', JSON.stringify(error));
+      // Show error to admin so they know the table/RLS is misconfigured
+      if (isAdmin) {
+        alert(
+          `❌ Could not load bots from Supabase:\n\n` +
+          `Code: ${error.code}\nMessage: ${error.message}\n\n` +
+          `Make sure you have:\n` +
+          `1. Run supabase-schema.sql in your Supabase SQL editor\n` +
+          `2. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY on Vercel`
+        );
       }
-    } catch (e) {
-      console.error('Failed to fetch bots from Supabase:', e);
+      return;
+    }
+
+    if (data) {
+      console.log('[AutoTrendX] Loaded', data.length, 'bots from Supabase');
+      setBots(data);
     }
   };
 
