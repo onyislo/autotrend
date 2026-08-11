@@ -250,12 +250,27 @@ function TradeHistoryPanel({ userId }: { userId?: string | null }) {
     const fetchTrades = async () => {
       setLoading(true);
       try {
+        let effectiveUserId = userId;
+        if (!effectiveUserId) {
+          try {
+            const raw = localStorage.getItem('deriv_auth');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              effectiveUserId = parsed.account || parsed.loginid || null;
+            }
+          } catch {}
+        }
+
         let query = supabase
           .from('trades')
           .select('id, symbol, contract_type, amount, profit_loss, status, deriv_contract_id, created_at')
           .order('created_at', { ascending: false })
           .limit(100);
-        if (userId) query = query.eq('user_id', userId);
+          
+        if (effectiveUserId) {
+          query = query.eq('user_id', effectiveUserId);
+        }
+
         const { data, error } = await query;
         if (!error && data) setTrades(data as TradeRecord[]);
       } catch { /* ignore */ }

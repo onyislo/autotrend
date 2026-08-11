@@ -293,23 +293,41 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
           netProfit: netProfit
         });
 
-        // Insert trade log in database (optional / best effort)
-        if (userId) {
-          try {
-            await supabase.from('trades').insert([{
-              user_id: userId,
-              symbol: strategy.symbol,
-              contract_type: strategy.contractType,
-              type: strategy.contractType === 'CALL' ? 'buy' : 'sell',
-              amount: currentStake,
-              deriv_contract_id: String(contractId),
-              profit_loss: finalProfit,
-              status: 'closed',
-              entry_price: entryPrice
-            }]);
-          } catch {
-            // best-effort logging
+        // Insert trade log in database with fallback to localStorage
+        let dbUserId = userId;
+        let dbUserEmail = userEmail;
+        try {
+          const raw = localStorage.getItem('deriv_auth');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (!dbUserId) dbUserId = parsed.account || parsed.loginid || null;
+            if (!dbUserEmail) dbUserEmail = parsed.email || null;
           }
+        } catch {}
+
+        if (dbUserId) {
+          const tradeData = {
+            user_id: dbUserId,
+            user_email: dbUserEmail,
+            bot_id: bot.id,
+            symbol: strategy.symbol,
+            contract_type: strategy.contractType,
+            type: strategy.contractType === 'CALL' ? 'buy' : 'sell',
+            amount: Number(currentStake) || 0,
+            deriv_contract_id: String(contractId),
+            profit_loss: Number(finalProfit) || 0,
+            status: 'closed',
+            entry_price: entryPrice != null && !isNaN(Number(entryPrice)) ? Number(entryPrice) : null
+          };
+
+          const { error: dbErr } = await supabase.from('trades').insert([tradeData]);
+          if (dbErr) {
+            console.error('[AutoTrendX] Failed to save trade to Supabase:', dbErr);
+          } else {
+            console.log('[AutoTrendX] Trade saved to Supabase:', tradeData);
+          }
+        } else {
+          console.warn('[AutoTrendX] Skipped saving trade to Supabase: No active user account ID resolved.');
         }
 
         // Wait 2 seconds before next trade
