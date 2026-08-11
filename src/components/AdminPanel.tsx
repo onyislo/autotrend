@@ -76,6 +76,8 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
   const [isUsingLiveDb, setIsUsingLiveDb] = useState(false);
   const [liveTrades, setLiveTrades] = useState<any[]>([]);
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalTrades, setTotalTrades] = useState(0);
 
   useEffect(() => {
     loadAdminBots();
@@ -208,19 +210,31 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
     try {
       const { data: profiles, error: pErr } = await supabase.from('profiles').select('*');
       if (pErr) throw pErr;
+
+      // Always set total user count from profiles table
+      if (profiles) {
+        setTotalUsers(profiles.length);
+      }
+
       if (profiles && profiles.length > 0) {
         const { data: balances } = await supabase.from('account_balance').select('*');
         const { data: trades } = await supabase.from('trades').select('user_id, profit_loss');
+
+        // Set total trade count
+        setTotalTrades(trades?.length ?? 0);
+
         const resolved = profiles.map((p: any) => {
           const balObj = balances?.find((b: any) => b.user_id === p.id);
           const userTrades = trades?.filter((t: any) => t.user_id === p.id) || [];
           return {
-            id: p.id ? p.id.substring(0, 8).toUpperCase() : 'USER',
+            id: p.id ? String(p.id).substring(0, 8).toUpperCase() : 'USER',
             name: p.full_name || p.email?.split('@')[0] || 'Trader',
             email: p.email || 'No email',
-            accountType: balObj?.currency ? `Real (${balObj.currency})` : 'Real (USD)',
+            accountType: p.account_type
+              ? `${p.account_type.charAt(0).toUpperCase()}${p.account_type.slice(1)}`
+              : (balObj?.currency ? `Real (${balObj.currency})` : 'Real (USD)'),
             activeBot: userTrades.length > 0 ? 'Auto Bot' : 'None',
-            status: 'Online',
+            status: p.status || 'Online',
             balance: balObj?.balance !== undefined ? `$${Number(balObj.balance).toFixed(2)}` : '$0.00',
             totalTrades: userTrades.length
           };
@@ -229,6 +243,12 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
         setIsUsingLiveDb(true);
         return;
       }
+    } catch {}
+
+    // Fallback: also try to count trades even if profiles fail
+    try {
+      const { data: tradesAll } = await supabase.from('trades').select('id');
+      setTotalTrades(tradesAll?.length ?? 0);
     } catch {}
 
     setClients([]);
@@ -417,7 +437,19 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
       <div className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
 
         {/* ── STAT CARDS (always visible) ──────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          {/* Total Users */}
+          <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'rgba(251,146,60,0.07)', border: '1px solid rgba(251,146,60,0.18)' }}>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Users</p>
+              <p className="text-3xl font-black text-white">{totalUsers}</p>
+              <p className="text-[10px] text-orange-400 mt-1">Registered on site</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-orange-400" style={{ background: 'rgba(251,146,60,0.12)', border: '1px solid rgba(251,146,60,0.25)' }}>
+              <Users size={22} />
+            </div>
+          </div>
+
           {/* Deployed Bots */}
           <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)' }}>
             <div>
@@ -430,15 +462,15 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
             </div>
           </div>
 
-          {/* Active Sessions */}
+          {/* Total Trades */}
           <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'rgba(14,165,233,0.07)', border: '1px solid rgba(14,165,233,0.18)' }}>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Client Sessions</p>
-              <p className="text-3xl font-black text-white">{clients.length}</p>
-              <p className="text-[10px] text-sky-400 mt-1">Live WebSocket connections</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Trades</p>
+              <p className="text-3xl font-black text-white">{totalTrades}</p>
+              <p className="text-[10px] text-sky-400 mt-1">All-time trade executions</p>
             </div>
             <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sky-400" style={{ background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.25)' }}>
-              <Users size={22} />
+              <TrendingUp size={22} />
             </div>
           </div>
 

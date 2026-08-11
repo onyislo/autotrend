@@ -8,6 +8,7 @@ import {
 import AutoBotsPanel from './AutoBotsPanel';
 import ChartsSection from './ChartsSection';
 import { getUserData } from '../lib/finalAuth';
+import { syncDerivUserToSupabase } from '../lib/supabase';
 
 function Logo({ size = 28 }: { size?: number }) {
   return (
@@ -259,6 +260,18 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
   const currentAccountId = currentAccount?.account_id ?? currentAccount?.loginid ?? null;
   const clientToken = storedAuth?.access_token;
 
+  // Sync Deriv user to Supabase on login so admin can see all site users
+  useEffect(() => {
+    const auth = getUserData();
+    if (!auth?.account) return;
+    syncDerivUserToSupabase({
+      account_id: auth.account,
+      account_type: auth.account_type || 'real',
+      currency: auth.currency || 'USD',
+      balance: 0,
+    });
+  }, []);
+
   useEffect(() => {
     let url = '/api/auth/me';
     const params = new URLSearchParams();
@@ -279,9 +292,20 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
 
     fetch(url)
       .then(r => { if (!r.ok) return null; return r.json(); })
-      .then((d: SessionData | null) => { 
+      .then((d: SessionData | null) => {
         if (d && Array.isArray(d.accounts)) {
-          setSession(d); 
+          setSession(d);
+          // Sync all accounts to Supabase so admin sees every user
+          d.accounts.forEach((acc: any) => {
+            if (acc.account_id || acc.loginid) {
+              syncDerivUserToSupabase({
+                account_id: acc.account_id || acc.loginid,
+                account_type: acc.account_type || 'real',
+                currency: acc.currency || 'USD',
+                balance: acc.balance ?? 0,
+              });
+            }
+          });
         }
       })
       .catch(() => null);

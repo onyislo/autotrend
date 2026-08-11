@@ -1,51 +1,58 @@
+-- AutoTrendX Supabase Database Schema
+-- Run this script in your Supabase SQL Editor to create tables for Deriv Users, Bots, Trades, and Balances.
+
 -- Enable Row Level Security
 ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 
--- Create profiles table
+-- 1. Create profiles table (Stores Deriv authenticated client accounts & user data)
 CREATE TABLE IF NOT EXISTS profiles (
-  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   full_name TEXT,
   avatar_url TEXT,
   deriv_token TEXT,
+  account_type TEXT DEFAULT 'Real',
+  status TEXT DEFAULT 'Online',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create trading_bots table
+-- 2. Create trading_bots table (Stores global shared & custom user trading bots)
 CREATE TABLE IF NOT EXISTS trading_bots (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id TEXT,
   name TEXT NOT NULL,
   description TEXT,
   strategy JSONB NOT NULL,
+  is_public BOOLEAN DEFAULT TRUE,
   is_active BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create trades table
+-- 3. Create trades table (Stores real-time trade logs executed by clients/bots)
 CREATE TABLE IF NOT EXISTS trades (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  bot_id UUID REFERENCES trading_bots(id) ON DELETE SET NULL,
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id TEXT,
+  user_email TEXT,
+  bot_id TEXT,
   symbol TEXT NOT NULL,
   contract_type TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('buy', 'sell')),
+  type TEXT NOT NULL CHECK (type IN ('buy', 'sell', 'RISE', 'FALL', 'DIFFERS', 'MATCHES')),
   amount DECIMAL(10,2) NOT NULL,
   entry_price DECIMAL(10,4),
   exit_price DECIMAL(10,4),
   profit_loss DECIMAL(10,2),
-  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'open',
   deriv_contract_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create account_balance table
+-- 4. Create account_balance table (Stores client live account balances)
 CREATE TABLE IF NOT EXISTS account_balance (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id TEXT UNIQUE NOT NULL,
   balance DECIMAL(10,2) DEFAULT 0,
   currency TEXT DEFAULT 'USD',
   last_updated TIMESTAMPTZ DEFAULT NOW()
@@ -57,68 +64,45 @@ ALTER TABLE trading_bots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_balance ENABLE ROW LEVEL SECURITY;
 
--- Create policies for profiles
-CREATE POLICY "Users can view own profile" ON profiles
-  FOR SELECT USING (auth.uid() = id);
+-- Policies for profiles
+DROP POLICY IF EXISTS "Public view profiles" ON profiles;
+CREATE POLICY "Public view profiles" ON profiles FOR SELECT USING (true);
 
-CREATE POLICY "Users can update own profile" ON profiles
-  FOR UPDATE USING (auth.uid() = id);
+DROP POLICY IF EXISTS "Public insert profiles" ON profiles;
+CREATE POLICY "Public insert profiles" ON profiles FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Users can insert own profile" ON profiles
-  FOR INSERT WITH CHECK (auth.uid() = id);
+DROP POLICY IF EXISTS "Public update profiles" ON profiles;
+CREATE POLICY "Public update profiles" ON profiles FOR UPDATE USING (true);
 
--- Create policies for trading_bots
-CREATE POLICY "Users can view own bots" ON trading_bots
-  FOR SELECT USING (auth.uid() = user_id);
+-- Policies for trading_bots
+DROP POLICY IF EXISTS "Public view trading_bots" ON trading_bots;
+CREATE POLICY "Public view trading_bots" ON trading_bots FOR SELECT USING (true);
 
-CREATE POLICY "Users can create own bots" ON trading_bots
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Public insert trading_bots" ON trading_bots;
+CREATE POLICY "Public insert trading_bots" ON trading_bots FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Users can update own bots" ON trading_bots
-  FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Public update trading_bots" ON trading_bots;
+CREATE POLICY "Public update trading_bots" ON trading_bots FOR UPDATE USING (true);
 
-CREATE POLICY "Users can delete own bots" ON trading_bots
-  FOR DELETE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Public delete trading_bots" ON trading_bots;
+CREATE POLICY "Public delete trading_bots" ON trading_bots FOR DELETE USING (true);
 
--- Create policies for trades
-CREATE POLICY "Users can view own trades" ON trades
-  FOR SELECT USING (auth.uid() = user_id);
+-- Policies for trades
+DROP POLICY IF EXISTS "Public view trades" ON trades;
+CREATE POLICY "Public view trades" ON trades FOR SELECT USING (true);
 
-CREATE POLICY "Users can create own trades" ON trades
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Public insert trades" ON trades;
+CREATE POLICY "Public insert trades" ON trades FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Users can update own trades" ON trades
-  FOR UPDATE USING (auth.uid() = user_id);
+-- Policies for account_balance
+DROP POLICY IF EXISTS "Public view balance" ON account_balance;
+CREATE POLICY "Public view balance" ON account_balance FOR SELECT USING (true);
 
--- Create policies for account_balance
-CREATE POLICY "Users can view own balance" ON account_balance
-  FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Public insert balance" ON account_balance;
+CREATE POLICY "Public insert balance" ON account_balance FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Users can update own balance" ON account_balance
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own balance" ON account_balance
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Create function to handle user registration
-CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO profiles (id, email, full_name)
-  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name');
-  
-  INSERT INTO account_balance (user_id, balance)
-  VALUES (NEW.id, 0);
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create trigger for new user registration
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+DROP POLICY IF EXISTS "Public update balance" ON account_balance;
+CREATE POLICY "Public update balance" ON account_balance FOR UPDATE USING (true);
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -130,11 +114,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create triggers for updated_at
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_trading_bots_updated_at ON trading_bots;
 CREATE TRIGGER update_trading_bots_updated_at BEFORE UPDATE ON trading_bots
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_trades_updated_at ON trades;
 CREATE TRIGGER update_trades_updated_at BEFORE UPDATE ON trades
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
