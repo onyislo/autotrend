@@ -352,7 +352,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
           <>
             {/* Backdrop Overlay */}
             <motion.div
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -360,7 +360,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
             />
             {/* Left-sliding Drawer Content */}
             <motion.aside
-              className="fixed top-0 left-0 bottom-0 z-50 w-72 sm:w-80 shadow-2xl flex flex-col border-r border-white/10 overflow-y-auto"
+              className="fixed top-0 left-0 bottom-0 z-[201] w-72 sm:w-80 shadow-2xl flex flex-col border-r border-white/10 overflow-y-auto"
               style={{ background: '#0a0f1d' }}
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
