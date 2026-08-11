@@ -10,6 +10,7 @@ let supabase: SupabaseClient;
 
 if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
+  console.log('[AutoTrendX] ✅ Supabase connected to:', supabaseUrl);
 } else {
   // Minimal stub — satisfies TypeScript's structural typing for SupabaseClient.
   // Methods will throw at runtime only if actually called without env vars.
@@ -29,9 +30,14 @@ if (supabaseUrl && supabaseKey) {
     }),
   } as unknown as SupabaseClient;
 
-  console.warn(
-    '[AutoTrendX] Supabase env vars not set (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY). ' +
-    'Auth and database features are disabled.',
+  // ── DIAGNOSTIC: Open browser DevTools → Console to see this ──
+  console.error(
+    '[AutoTrendX] ❌ SUPABASE NOT CONFIGURED\n' +
+    'VITE_SUPABASE_URL    = ' + JSON.stringify(supabaseUrl) + '\n' +
+    'VITE_SUPABASE_ANON_KEY = ' + (supabaseKey ? `"${supabaseKey.substring(0,20)}..."` : JSON.stringify(supabaseKey)) + '\n\n' +
+    'Fix: On Vercel → Settings → Environment Variables,\n' +
+    'add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY,\n' +
+    'then REDEPLOY the project.'
   );
 }
 
