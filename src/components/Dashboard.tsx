@@ -408,7 +408,25 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null);
   const [session, setSession] = useState<SessionData | null>(null);
-  const [accountMode, setAccountMode] = useState<'real' | 'demo'>('real');
+  const [accountMode, setAccountMode] = useState<'real' | 'demo'>(() => {
+    try {
+      const saved = localStorage.getItem('autotrendx_account_mode');
+      if (saved === 'real' || saved === 'demo') return saved;
+    } catch {}
+    try {
+      const auth = getUserData();
+      if (auth?.account_type === 'demo' || auth?.account_type === 'virtual') {
+        return 'demo';
+      }
+    } catch {}
+    return 'real';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('autotrendx_account_mode', accountMode);
+    } catch {}
+  }, [accountMode]);
 
   // Strict account resolution — NEVER fallback Demo account under Real mode
   const storedAuth = getUserData();
