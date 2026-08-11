@@ -97,6 +97,15 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
     takeProfit: 40,
   });
 
+  // Upload-naming modal state
+  const [pendingUpload, setPendingUpload] = useState<{
+    symbol: string;
+    contractType: string;
+    fileName: string;
+  } | null>(null);
+  const [uploadBotName, setUploadBotName] = useState('');
+  const [uploadBotDesc, setUploadBotDesc] = useState('');
+
   const isRunningRef = useRef(false);
   const runningBotIdRef = useRef<string | null>(null);
   
@@ -454,53 +463,48 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {/* Admin XML Upload */}
+              {/* Admin File Upload — any file type */}
               <input
                 type="file"
-                accept=".xml"
+                accept="*"
                 id="admin-xml-upload"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = (evt) => {
-                    const xmlContent = evt.target?.result as string;
-                    if (!xmlContent) return;
-                    const symbolMatch = xmlContent.match(/<field name="SYMBOL_LIST">(.*?)<\/field>/);
-                    const purchaseMatch = xmlContent.match(/<field name="PURCHASE_LIST">(.*?)<\/field>/);
-                    const symbol = symbolMatch ? symbolMatch[1] : 'R_50';
-                    const contractType = purchaseMatch ? purchaseMatch[1] : 'DIGITDIFF';
-                    const botName = file.name.replace(/\.xml$/i, '').toUpperCase();
-                    const newBot: Bot = {
-                      id: `admin-xml-${Date.now()}`,
-                      name: botName,
-                      description: `Admin uploaded XML bot (${botName}) on ${symbol}.`,
-                      is_public: true,
-                      strategy: {
-                        symbol,
-                        contractType,
-                        amount: 1,
-                        duration: 1,
-                        martingale: true,
-                        martingaleMultiplier: 2,
-                        maxMartingaleSteps: 4,
-                        stopLoss: 20,
-                        takeProfit: 40,
-                      }
+                  // For XML files, try to extract symbol/contract; otherwise use defaults
+                  const isXml = file.name.toLowerCase().endsWith('.xml');
+                  if (isXml) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                      const xmlContent = evt.target?.result as string;
+                      const symbolMatch = xmlContent?.match(/<field name="SYMBOL_LIST">(.*?)<\/field>/);
+                      const purchaseMatch = xmlContent?.match(/<field name="PURCHASE_LIST">(.*?)<\/field>/);
+                      const symbol = symbolMatch ? symbolMatch[1] : 'R_50';
+                      const contractType = purchaseMatch ? purchaseMatch[1] : 'DIGITDIFF';
+                      // Pre-fill suggested name but let admin rename
+                      const suggested = file.name.replace(/\.xml$/i, '').toUpperCase();
+                      setUploadBotName(suggested);
+                      setUploadBotDesc(`Uploaded bot on ${symbol}.`);
+                      setPendingUpload({ symbol, contractType, fileName: file.name });
                     };
-                    saveLocalAdminBot(newBot);
-                    setBots(prev => [newBot, ...prev.filter(b => b.id !== newBot.id)]);
-                    alert(`✅ Bot "${botName}" uploaded and deployed to all users!`);
-                  };
-                  reader.readAsText(file);
+                    reader.readAsText(file);
+                  } else {
+                    // Non-XML: open naming modal with defaults
+                    const suggested = file.name.replace(/\.[^.]+$/, '').toUpperCase();
+                    setUploadBotName(suggested);
+                    setUploadBotDesc('');
+                    setPendingUpload({ symbol: 'R_50', contractType: 'DIGITDIFF', fileName: file.name });
+                  }
+                  // Reset input so same file can be re-selected
+                  e.target.value = '';
                 }}
               />
               <label
                 htmlFor="admin-xml-upload"
                 className="flex items-center gap-2 bg-white border border-emerald-400 text-emerald-700 hover:bg-emerald-100 font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm text-sm cursor-pointer"
               >
-                <Upload size={15} /> Upload .XML Bot
+                <Upload size={15} /> Upload Bot File
               </label>
               <button
                 onClick={() => setShowCreator(true)}
@@ -877,6 +881,102 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                   className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm"
                 >
                   Save & Publish Bot
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Upload Naming Modal (Admin Only) */}
+      <AnimatePresence>
+        {pendingUpload && isAdmin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5"
+            >
+              <div className="flex justify-between items-center border-b pb-4">
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg">Name Your Bot</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">File: <span className="font-mono text-emerald-600">{pendingUpload.fileName}</span></p>
+                </div>
+                <button
+                  onClick={() => setPendingUpload(null)}
+                  className="text-gray-400 hover:text-gray-600 font-bold text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Bot Name <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    value={uploadBotName}
+                    onChange={(e) => setUploadBotName(e.target.value)}
+                    placeholder="e.g. Volatility Sniper Pro"
+                    autoFocus
+                    className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Description</label>
+                  <textarea
+                    value={uploadBotDesc}
+                    onChange={(e) => setUploadBotDesc(e.target.value)}
+                    placeholder="Brief strategy description for your users..."
+                    rows={3}
+                    className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 border-t pt-4">
+                <button
+                  onClick={() => setPendingUpload(null)}
+                  className="flex-1 py-2.5 border border-gray-200 rounded-xl font-bold text-gray-600 text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!uploadBotName.trim()}
+                  onClick={() => {
+                    const newBot: Bot = {
+                      id: `admin-upload-${Date.now()}`,
+                      name: uploadBotName.trim(),
+                      description: uploadBotDesc.trim() || `Admin uploaded bot on ${pendingUpload.symbol}.`,
+                      is_public: true,
+                      strategy: {
+                        symbol: pendingUpload.symbol,
+                        contractType: pendingUpload.contractType,
+                        amount: 1,
+                        duration: 1,
+                        martingale: true,
+                        martingaleMultiplier: 2,
+                        maxMartingaleSteps: 4,
+                        stopLoss: 20,
+                        takeProfit: 40,
+                      }
+                    };
+                    saveLocalAdminBot(newBot);
+                    setBots(prev => [newBot, ...prev.filter(b => b.id !== newBot.id)]);
+                    setPendingUpload(null);
+                    setUploadBotName('');
+                    setUploadBotDesc('');
+                    alert(`✅ Bot "${newBot.name}" deployed to all users!`);
+                  }}
+                  className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm transition-colors"
+                >
+                  Deploy Bot
                 </button>
               </div>
             </motion.div>

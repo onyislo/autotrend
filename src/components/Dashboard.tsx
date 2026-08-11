@@ -215,14 +215,14 @@ function SignalCard({ signal, onLoad }: { signal: Signal; onLoad: (s: Signal) =>
 
 // ── Free Bots ─────────────────────────────────────────────────────────────────
 
-function FreeBotsPanel({ wsToken, wsUrl, adminEmail }: { wsToken?: string | null; wsUrl?: string | null; adminEmail?: string }) {
+function FreeBotsPanel({ wsToken, wsUrl, adminEmail, userId }: { wsToken?: string | null; wsUrl?: string | null; adminEmail?: string; userId?: string | null }) {
   return (
     <div className="space-y-6">
       <AutoBotsPanel
         wsToken={wsToken ?? null}
         wsUrl={wsUrl ?? null}
         userEmail={adminEmail ?? null}
-        userId={null}
+        userId={userId ?? null}
       />
     </div>
   );
@@ -637,7 +637,7 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
           )}
 
           {activeTab === 'freebots' && (
-            <FreeBotsPanel wsToken={session?.wsToken} wsUrl={session?.wsUrl} adminEmail={adminEmail} />
+            <FreeBotsPanel wsToken={session?.wsToken} wsUrl={session?.wsUrl} adminEmail={adminEmail} userId={currentAccountId} />
           )}
 
           {/* Charts — 100% native canvas live chart */}
