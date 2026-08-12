@@ -24,7 +24,7 @@ function Logo({ size = 28 }: { size?: number }) {
   );
 }
 
-type TabId = 'dashboard' | 'freebots' | 'tradehistory' | 'quickbot' | 'autotrade' | 'signalai' | 'copytrader' | 'charts';
+type TabId = 'dashboard' | 'freebots' | 'tradehistory' | 'autotrade' | 'signalai' | 'copytrader' | 'charts';
 
 interface Signal {
   id: number; market: string; symbol: string; type: string;
@@ -46,7 +46,6 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
   { id: 'freebots', label: 'Free Bots', icon: <Zap size={16} /> },
   { id: 'tradehistory', label: 'Trade History', icon: <History size={16} /> },
-  { id: 'quickbot', label: 'Quick Bot', icon: <Activity size={16} /> },
   { id: 'autotrade', label: 'Auto Trade', icon: <RefreshCw size={16} /> },
   { id: 'signalai', label: 'Signal AI', icon: <BarChart2 size={16} /> },
   { id: 'copytrader', label: 'Copy Trader', icon: <Copy size={16} /> },
@@ -835,11 +834,18 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
             <ChartsSection wsToken={session?.wsToken} wsUrl={session?.wsUrl} />
           </div>
 
-          {['quickbot', 'autotrade', 'copytrader'].includes(activeTab) && (
-            <div className="flex flex-col items-center justify-center py-24 text-center max-w-7xl mx-auto">
-              <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4"><Zap size={32} className="text-emerald-500" /></div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">{TABS.find(t => t.id === activeTab)?.label}</h2>
-              <p className="text-gray-500 max-w-sm font-medium">Auto-trading feature ready for execution via Free Bots tab.</p>
+          {['autotrade', 'signalai', 'copytrader'].includes(activeTab) && (
+            <div className="flex flex-col items-center justify-center py-32 text-center max-w-md mx-auto space-y-4">
+              <div className="w-20 h-20 bg-emerald-50 border border-emerald-100 rounded-3xl flex items-center justify-center">
+                <span className="text-4xl">🚀</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full">Coming Soon</span>
+              </div>
+              <h2 className="text-2xl font-extrabold text-gray-900">{TABS.find(t => t.id === activeTab)?.label}</h2>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                This feature is currently under development and will be available soon. Stay tuned.
+              </p>
             </div>
           )}
         </main>

@@ -88,6 +88,8 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
   const [tradePopup, setTradePopup] = useState<{ type: 'win' | 'loss'; amount: number } | null>(null);
   
   const [botStakes, setBotStakes] = useState<Record<string, number>>({});
+  const [botTakeProfits, setBotTakeProfits] = useState<Record<string, number>>({});
+  const [botStopLosses, setBotStopLosses] = useState<Record<string, number>>({});
   const [showCreator, setShowCreator] = useState(false);
   const [newBotData, setNewBotData] = useState({
     name: '',
@@ -162,9 +164,17 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
     }
 
     const customStake = botStakes[bot.id];
-    const effectiveBot: Bot = customStake && customStake > 0
-      ? { ...bot, strategy: { ...bot.strategy, amount: customStake } }
-      : bot;
+    const customTP = botTakeProfits[bot.id];
+    const customSL = botStopLosses[bot.id];
+    const effectiveBot: Bot = {
+      ...bot,
+      strategy: {
+        ...bot.strategy,
+        amount: (customStake && customStake > 0) ? customStake : bot.strategy.amount,
+        takeProfit: (customTP && customTP > 0) ? customTP : bot.strategy.takeProfit,
+        stopLoss: (customSL && customSL > 0) ? customSL : bot.strategy.stopLoss,
+      },
+    };
     
     setRunningBotId(bot.id);
     runningBotIdRef.current = bot.id;
@@ -695,26 +705,42 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                   </div>
 
                   <div className="mt-6">
-                    {/* Adjustable Stake Input */}
+                    {/* Adjustable inputs — stake, take profit, stop loss */}
                     {!isThisBotRunning && (
-                      <div className="mb-3">
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                          Stake ($)
-                        </label>
-                        <input
-                          type="number"
-                          min={0.35}
-                          step={0.01}
-                          placeholder={`Default: $${bot.strategy.amount}`}
-                          value={botStakes[bot.id] ?? ''}
-                          onChange={(e) =>
-                            setBotStakes((prev) => ({
-                              ...prev,
-                              [bot.id]: Number(e.target.value),
-                            }))
-                          }
-                          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                        />
+                      <div className="mb-3 grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Stake ($)</label>
+                          <input
+                            type="number"
+                            min={0.35}
+                            step={0.01}
+                            value={botStakes[bot.id] ?? bot.strategy.amount}
+                            onChange={(e) => setBotStakes(prev => ({ ...prev, [bot.id]: Number(e.target.value) }))}
+                            className="w-full border border-gray-200 rounded-xl px-2 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">Take Profit ($)</label>
+                          <input
+                            type="number"
+                            min={1}
+                            step={0.5}
+                            value={botTakeProfits[bot.id] ?? bot.strategy.takeProfit}
+                            onChange={(e) => setBotTakeProfits(prev => ({ ...prev, [bot.id]: Number(e.target.value) }))}
+                            className="w-full border border-emerald-200 rounded-xl px-2 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-rose-400 uppercase tracking-wider mb-1">Stop Loss ($)</label>
+                          <input
+                            type="number"
+                            min={1}
+                            step={0.5}
+                            value={botStopLosses[bot.id] ?? bot.strategy.stopLoss}
+                            onChange={(e) => setBotStopLosses(prev => ({ ...prev, [bot.id]: Number(e.target.value) }))}
+                            className="w-full border border-rose-200 rounded-xl px-2 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-rose-400"
+                          />
+                        </div>
                       </div>
                     )}
                     {isThisBotRunning ? (
