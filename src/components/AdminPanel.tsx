@@ -94,26 +94,12 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
   }, []);
 
   const loadAdminBots = async () => {
-    const list: BotItem[] = [];
-
-    try {
-      const raw = localStorage.getItem('autotrendx_admin_bots');
-      if (raw) {
-        const local = JSON.parse(raw);
-        if (Array.isArray(local)) {
-          list.push(...local.filter((item: any) => !list.some(b => b.id === item.id)));
-        }
-      }
-    } catch {}
-
     try {
       const { data, error } = await supabase.from('trading_bots').select('*').eq('is_public', true);
-      if (!error && data && data.length > 0) {
-        list.push(...data.filter((d: any) => !list.some(b => b.id === d.id)));
+      if (!error && data) {
+        setBots(data);
       }
     } catch {}
-
-    setBots(list);
   };
 
   const handleSaveLocalBot = (botItem: BotItem) => {
@@ -149,8 +135,19 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
       const symbol = symbolMatch ? symbolMatch[1] : 'R_50';
       const contractType = purchaseMatch ? purchaseMatch[1] : 'DIGITDIFF';
 
-      const strategy: BotStrategy = { symbol, contractType, amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 };
-      const description = `Uploaded bot (${file.name}) on ${symbol}.`;
+      // Use the current form values for all strategy settings — no hardcoded values
+      const strategy: BotStrategy = {
+        symbol,
+        contractType,
+        amount: Number(newBot.amount),
+        duration: Number(newBot.duration),
+        martingale: newBot.martingale,
+        martingaleMultiplier: Number(newBot.martingaleMultiplier),
+        maxMartingaleSteps: Number(newBot.maxMartingaleSteps),
+        stopLoss: Number(newBot.stopLoss),
+        takeProfit: Number(newBot.takeProfit),
+      };
+      const description = newBot.description || `Uploaded bot (${file.name}) on ${symbol}.`;
 
       const { data, error } = await supabase.from('trading_bots').insert([{
         name: botName.trim(),

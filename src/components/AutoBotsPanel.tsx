@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pause, Plus, ShieldAlert, BarChart3, TrendingUp, Cpu, History, Trash2, Upload } from 'lucide-react';
+import { Pause, Plus, ShieldAlert, BarChart3, TrendingUp, TrendingDown, Cpu, History, Trash2, Upload } from 'lucide-react';
 import { derivAPI, SYNTHETIC_INDICES } from '../lib/derivAPI';
 import { supabase } from '../lib/supabase';
 
@@ -80,8 +80,14 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
     wins: 0,
     losses: 0,
     netProfit: 0,
+    totalProfit: 0,
+    totalLoss: 0,
   });
+
+  // Trade result popup
+  const [tradePopup, setTradePopup] = useState<{ type: 'win' | 'loss'; amount: number } | null>(null);
   
+  const [botStakes, setBotStakes] = useState<Record<string, number>>({});
   const [showCreator, setShowCreator] = useState(false);
   const [newBotData, setNewBotData] = useState({
     name: '',
@@ -154,18 +160,24 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
       alert('Secure session is not initialized. Please refresh page.');
       return;
     }
+
+    const customStake = botStakes[bot.id];
+    const effectiveBot: Bot = customStake && customStake > 0
+      ? { ...bot, strategy: { ...bot.strategy, amount: customStake } }
+      : bot;
     
     setRunningBotId(bot.id);
     runningBotIdRef.current = bot.id;
     isRunningRef.current = true;
     
     setLogs([]);
-    setStats({ totalTrades: 0, wins: 0, losses: 0, netProfit: 0 });
+    setStats({ totalTrades: 0, wins: 0, losses: 0, netProfit: 0, totalProfit: 0, totalLoss: 0 });
+    setTradePopup(null);
     
-    addLog(`Initializing ${bot.name}...`, 'info');
+    addLog(`Initializing ${effectiveBot.name}...`, 'info');
     
     // Execute trade loop in background
-    runBotLoop(bot);
+    runBotLoop(effectiveBot);
   };
 
   const stopBot = () => {
@@ -183,6 +195,8 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
     let winsCount = 0;
     let lossesCount = 0;
     let totalTradesCount = 0;
+    let totalProfitSum = 0;
+    let totalLossSum = 0;
 
     try {
       addLog('Connecting to Deriv WebSocket API...', 'info');
@@ -263,15 +277,22 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
         if (isWin) {
           winsCount++;
           netProfit += finalProfit;
+          totalProfitSum += finalProfit;
           consecutiveLosses = 0;
-          currentStake = strategy.amount; // reset stake on win
+          currentStake = strategy.amount;
           addLog(`👍 WIN! Profit: +$${finalProfit.toFixed(2)} | Net: $${netProfit.toFixed(2)}`, 'success');
+          // Show win popup for 2 seconds
+          setTradePopup({ type: 'win', amount: finalProfit });
+          setTimeout(() => setTradePopup(null), 2000);
         } else {
           lossesCount++;
-          netProfit += finalProfit; // finalProfit is negative for loss
+          netProfit += finalProfit;
+          totalLossSum += Math.abs(finalProfit);
           consecutiveLosses++;
-          
           addLog(`👎 LOSS! Loss: $${finalProfit.toFixed(2)} | Net: $${netProfit.toFixed(2)}`, 'error');
+          // Show loss popup for 2 seconds
+          setTradePopup({ type: 'loss', amount: finalProfit });
+          setTimeout(() => setTradePopup(null), 2000);
 
           if (strategy.martingale && consecutiveLosses <= strategy.maxMartingaleSteps) {
             currentStake = currentStake * strategy.martingaleMultiplier;
@@ -290,7 +311,9 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
           totalTrades: totalTradesCount,
           wins: winsCount,
           losses: lossesCount,
-          netProfit: netProfit
+          netProfit: netProfit,
+          totalProfit: totalProfitSum,
+          totalLoss: totalLossSum,
         });
 
         // Insert trade log in database with fallback to localStorage
@@ -386,7 +409,6 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
     }
 
     if (data && data.length > 0) {
-      saveLocalAdminBot(data[0]);
       setBots([...bots, data[0]]);
       setShowCreator(false);
       alert('✅ Admin Bot created and saved to Supabase successfully!');
@@ -398,16 +420,11 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
       alert('Cannot delete default system templates.');
       return;
     }
-    
     try {
-      await supabase
-        .from('trading_bots')
-        .delete()
-        .eq('id', botId);
+      await supabase.from('trading_bots').delete().eq('id', botId);
     } catch (err) {
       console.error('Error deleting from Supabase:', err);
     }
-    removeLocalAdminBot(botId);
     setBots(prev => prev.filter((b) => b.id !== botId));
   };
 
@@ -477,6 +494,28 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
         </div>
       )}
 
+      {/* Trade result popup — floats fixed at top-center of viewport */}
+      <AnimatePresence>
+        {tradePopup && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.7, y: -40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.7, y: -40 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            className={`fixed top-6 left-1/2 -translate-x-1/2 z-[9999] px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 font-black text-white text-xl pointer-events-none select-none ${
+              tradePopup.type === 'win'
+                ? 'bg-emerald-500 shadow-emerald-500/50'
+                : 'bg-rose-500 shadow-rose-500/50'
+            }`}
+          >
+            <span className="text-3xl">{tradePopup.type === 'win' ? '🎉' : '💸'}</span>
+            {tradePopup.type === 'win'
+              ? `WIN  +$${Math.abs(tradePopup.amount).toFixed(2)}`
+              : `LOSS  -$${Math.abs(tradePopup.amount).toFixed(2)}`}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Bot Runner Live Console */}
       <AnimatePresence>
         {runningBotId && (
@@ -516,11 +555,13 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
             </div>
 
             {/* Live Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 relative z-10">
               {[
                 { label: 'Total Trades', value: stats.totalTrades, icon: History, color: 'text-blue-400', bg: 'bg-blue-500/5 border-blue-500/10' },
-                { label: 'Wins Count', value: stats.wins, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
-                { label: 'Losses Count', value: stats.losses, icon: ShieldAlert, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10' },
+                { label: 'Wins', value: stats.wins, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
+                { label: 'Losses', value: stats.losses, icon: ShieldAlert, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10' },
+                { label: 'Total Profit', value: `+$${stats.totalProfit.toFixed(2)}`, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
+                { label: 'Total Loss', value: `-$${stats.totalLoss.toFixed(2)}`, icon: TrendingDown, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10' },
                 {
                   label: 'Net P&L',
                   value: `${stats.netProfit >= 0 ? '+' : ''}$${stats.netProfit.toFixed(2)}`,
@@ -654,6 +695,28 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                   </div>
 
                   <div className="mt-6">
+                    {/* Adjustable Stake Input */}
+                    {!isThisBotRunning && (
+                      <div className="mb-3">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                          Stake ($)
+                        </label>
+                        <input
+                          type="number"
+                          min={0.35}
+                          step={0.01}
+                          placeholder={`Default: $${bot.strategy.amount}`}
+                          value={botStakes[bot.id] ?? ''}
+                          onChange={(e) =>
+                            setBotStakes((prev) => ({
+                              ...prev,
+                              [bot.id]: Number(e.target.value),
+                            }))
+                          }
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        />
+                      </div>
+                    )}
                     {isThisBotRunning ? (
                       <button
                         onClick={stopBot}
@@ -923,16 +986,17 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                     const name = uploadBotName.trim();
                     const description = uploadBotDesc.trim() || `Admin uploaded bot on ${pendingUpload.symbol}.`;
                     const effectiveUserId = userId ?? userEmail ?? 'admin';
+                    // Use the newBotData form values — never hardcode strategy
                     const strategy = {
                       symbol: pendingUpload.symbol,
                       contractType: pendingUpload.contractType,
-                      amount: 1,
-                      duration: 1,
-                      martingale: true,
-                      martingaleMultiplier: 2,
-                      maxMartingaleSteps: 4,
-                      stopLoss: 20,
-                      takeProfit: 40,
+                      amount: Number(newBotData.amount),
+                      duration: Number(newBotData.duration),
+                      martingale: newBotData.martingale,
+                      martingaleMultiplier: Number(newBotData.martingaleMultiplier),
+                      maxMartingaleSteps: Number(newBotData.maxMartingaleSteps),
+                      stopLoss: Number(newBotData.stopLoss),
+                      takeProfit: Number(newBotData.takeProfit),
                     };
 
                     const { data, error } = await supabase
@@ -954,7 +1018,6 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                     }
 
                     if (data && data.length > 0) {
-                      saveLocalAdminBot(data[0]);
                       setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
                       setPendingUpload(null);
                       setUploadBotName('');
