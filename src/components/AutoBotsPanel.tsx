@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pause, Plus, ShieldAlert, BarChart3, TrendingUp, TrendingDown, Cpu, History, Trash2, Upload } from 'lucide-react';
+import { Pause, Plus, BarChart3, TrendingUp, Cpu, History, Trash2, Upload } from 'lucide-react';
 import { derivAPI, SYNTHETIC_INDICES } from '../lib/derivAPI';
 import { supabase } from '../lib/supabase';
 
@@ -426,10 +426,11 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
   };
 
   const deleteBot = async (botId: string) => {
-    if (botId.startsWith('default-')) {
-      alert('Cannot delete default system templates.');
+    if (!isAdmin) {
+      alert('Only administrators can delete bots.');
       return;
     }
+    if (!confirm('Are you sure you want to delete this bot?')) return;
     try {
       await supabase.from('trading_bots').delete().eq('id', botId);
     } catch (err) {
@@ -565,13 +566,11 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
             </div>
 
             {/* Live Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 relative z-10">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
               {[
                 { label: 'Total Trades', value: stats.totalTrades, icon: History, color: 'text-blue-400', bg: 'bg-blue-500/5 border-blue-500/10' },
                 { label: 'Wins', value: stats.wins, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
-                { label: 'Losses', value: stats.losses, icon: ShieldAlert, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10' },
                 { label: 'Total Profit', value: `+$${stats.totalProfit.toFixed(2)}`, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
-                { label: 'Total Loss', value: `-$${stats.totalLoss.toFixed(2)}`, icon: TrendingDown, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10' },
                 {
                   label: 'Net P&L',
                   value: `${stats.netProfit >= 0 ? '+' : ''}$${stats.netProfit.toFixed(2)}`,
@@ -658,7 +657,7 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                           AutoTrendX Pro
                         </span>
                       </div>
-                      {!bot.id.startsWith('default-') && (
+                      {isAdmin && (
                         <button
                           onClick={() => deleteBot(bot.id)}
                           className="text-gray-400 hover:text-rose-500 p-1.5 hover:bg-gray-50 rounded-xl transition-all active:scale-95"

@@ -263,7 +263,6 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
   };
 
   const handleDeleteBot = async (botId: string) => {
-    if (botId.startsWith('default-')) { alert('Default system templates cannot be deleted.'); return; }
     if (!confirm('Are you sure you want to remove this bot template?')) return;
     try { await supabase.from('trading_bots').delete().eq('id', botId); } catch {}
     handleRemoveLocalBot(botId);
@@ -693,12 +692,10 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
                         </span>
                         <h3 className="font-bold text-white text-sm group-hover:text-emerald-400 transition-colors leading-tight">{bot.name}</h3>
                       </div>
-                      {!bot.id.startsWith('default-') && (
                         <button onClick={() => handleDeleteBot(bot.id)}
                           className="text-gray-600 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-all">
                           <Trash2 size={13} />
                         </button>
-                      )}
                     </div>
 
                     <p className="text-[11px] text-gray-500 leading-relaxed">{bot.description}</p>
