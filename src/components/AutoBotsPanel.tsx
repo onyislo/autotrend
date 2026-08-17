@@ -161,6 +161,16 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
     runningBotIdRef.current = bot.id;
     isRunningRef.current = true;
     
+    const initialStats = {
+      totalTrades: 0,
+      wins: 0,
+      losses: 0,
+      netProfit: 0,
+      totalProfit: 0,
+      totalLoss: 0,
+    };
+    statsRef.current = initialStats;
+    setStats(initialStats);
     setLogs([]);
     setTradePopup(null);
     
@@ -181,13 +191,12 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
     const { strategy } = bot;
     let currentStake = strategy.amount;
     let consecutiveLosses = 0;
-    // Preserve existing cumulative stats & Net P/L when starting bot
-    let netProfit = statsRef.current.netProfit;
-    let winsCount = statsRef.current.wins;
-    let lossesCount = statsRef.current.losses;
-    let totalTradesCount = statsRef.current.totalTrades;
-    let totalProfitSum = statsRef.current.totalProfit;
-    let totalLossSum = statsRef.current.totalLoss;
+    let netProfit = 0;
+    let winsCount = 0;
+    let lossesCount = 0;
+    let totalTradesCount = 0;
+    let totalProfitSum = 0;
+    let totalLossSum = 0;
 
     try {
       addLog('Connecting to Deriv WebSocket API...', 'info');
@@ -572,12 +581,11 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
             </div>
 
             {/* Live Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 relative z-10">
               {[
                 { label: 'Total Trades', value: stats.totalTrades, icon: History, color: 'text-blue-400', bg: 'bg-blue-500/5 border-blue-500/10' },
                 { label: 'Wins', value: stats.wins, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
                 { label: 'Losses', value: stats.losses, icon: TrendingUp, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10' },
-                { label: 'Total Profit', value: `+$${stats.totalProfit.toFixed(2)}`, icon: BarChart3, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
               ].map((stat) => (
                 <div key={stat.label} className={`rounded-xl border p-4 transition-all ${stat.bg}`}>
                   <div className="flex items-center justify-between mb-2">

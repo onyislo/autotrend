@@ -49,8 +49,9 @@ const MARKETS: MarketItem[] = [
   { symbol: 'JD100',    name: 'Jump 100 Index',              subcategory: 'Jump Indices' },
 ];
 
-const WS_PRIMARY  = 'wss://ws.derivws.com/websockets/v3?app_id=36544';
-const WS_FALLBACK = 'wss://ws.binaryws.com/websockets/v3?app_id=1089';
+const APP_ID = import.meta.env.VITE_DERIV_APP_ID ?? '';
+const WS_PRIMARY  = `wss://ws.derivws.com/websockets/v3?app_id=${APP_ID}`;
+const WS_FALLBACK = `wss://ws.binaryws.com/websockets/v3?app_id=${APP_ID}`;
 
 const MAX_TICKS     = 300;
 const HISTORY_COUNT = 200;

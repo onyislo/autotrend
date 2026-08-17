@@ -118,7 +118,7 @@ function SignalModal({ signal, wsToken, wsUrl, onClose, onBalanceUpdate }: { sig
 
   const startBot = useCallback(() => {
     const activeToken = wsToken || getUserData()?.access_token || null;
-    const activeWsUrl = wsUrl || 'wss://ws.derivws.com/websockets/v3?app_id=36544';
+    const activeWsUrl = wsUrl || `wss://ws.derivws.com/websockets/v3?app_id=${import.meta.env.VITE_DERIV_APP_ID ?? ''}`;
     if (!activeToken) { setStatus('❌ Not authenticated. Please login again.'); return; }
 
     const maxWins = parseInt(settings.takeProfit), maxLoss = parseFloat(settings.stopLoss), maxConsecutive = parseInt(settings.consecutiveLosses), martingale = parseFloat(settings.martingale), baseStake = parseFloat(settings.stake);

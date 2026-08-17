@@ -12,10 +12,8 @@ interface Props {
   label: string;
 }
 
-// Use derivws.com — more stable than binaryws.com for public tick streaming
-// App ID 36544 is a registered public demo app_id that works without auth for ticks
 const WS_ENDPOINT = 'wss://ws.derivws.com/websockets/v3?app_id=';
-const APP_ID = '36544';
+const APP_ID = import.meta.env.VITE_DERIV_APP_ID ?? '';
 const MAX_TICKS = 60;
 
 export default function DerivLiveChart({ symbol, wsToken, wsUrl, label }: Props) {

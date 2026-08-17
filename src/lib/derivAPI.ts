@@ -186,4 +186,4 @@ export const SYNTHETIC_INDICES = {
 }
 
 // Initialize Deriv API instance
-export const derivAPI = new DerivAPI(import.meta.env.VITE_DERIV_APP_ID || '33MJcHX2yZOr6lkeIP9Mg')
+export const derivAPI = new DerivAPI(import.meta.env.VITE_DERIV_APP_ID ?? '');

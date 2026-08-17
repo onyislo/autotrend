@@ -68,7 +68,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
       if (raw) return JSON.parse(raw);
     } catch {}
     return {
-      appId: '67664',
+      appId: import.meta.env.VITE_DERIV_APP_ID ?? '',
       wsUrl: 'wss://ws.derivws.com/websockets/v3',
       maintenanceMode: false,
       autoDeployDefaults: true,
