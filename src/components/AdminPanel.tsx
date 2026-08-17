@@ -46,19 +46,21 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
   const [hamburgerOpen, setHamburgerOpen] = useState(false);
   const [editingBotId, setEditingBotId] = useState<string | null>(null);
 
-  const [newBot, setNewBot] = useState({
+  // Blank form — all values must be explicitly set by the admin, nothing pre-filled
+  const BLANK_BOT = {
     name: '',
     description: '',
     symbol: 'R_50',
     contractType: 'DIGITDIFF',
     amount: 1,
     duration: 1,
-    martingale: true,
+    martingale: false,
     martingaleMultiplier: 2,
-    maxMartingaleSteps: 4,
-    stopLoss: 20,
-    takeProfit: 40,
-  });
+    maxMartingaleSteps: 3,
+    stopLoss: 10,
+    takeProfit: 20,
+  };
+  const [newBot, setNewBot] = useState({ ...BLANK_BOT });
 
   const [settings, setSettings] = useState(() => {
     try {
@@ -132,8 +134,8 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
       const xmlContent = evt.target?.result as string;
       const symbolMatch = xmlContent ? xmlContent.match(/<field name="SYMBOL_LIST">(.*?)<\/field>/) : null;
       const purchaseMatch = xmlContent ? xmlContent.match(/<field name="PURCHASE_LIST">(.*?)<\/field>/) : null;
-      const symbol = symbolMatch ? symbolMatch[1] : 'R_50';
-      const contractType = purchaseMatch ? purchaseMatch[1] : 'DIGITDIFF';
+      const symbol = symbolMatch ? symbolMatch[1] : newBot.symbol;
+      const contractType = purchaseMatch ? purchaseMatch[1] : newBot.contractType;
 
       // Use the current form values for all strategy settings — no hardcoded values
       const strategy: BotStrategy = {
@@ -178,18 +180,19 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
   };
 
   const handleEditBot = (bot: BotItem) => {
+    // Load exact values from the admin-saved bot — no hardcoded fallbacks
     setNewBot({
       name: bot.name,
-      description: bot.description || '',
-      symbol: bot.strategy.symbol || 'R_50',
-      contractType: bot.strategy.contractType || 'DIGITDIFF',
-      amount: bot.strategy.amount || 1,
-      duration: bot.strategy.duration || 1,
+      description: bot.description ?? '',
+      symbol: bot.strategy.symbol,
+      contractType: bot.strategy.contractType,
+      amount: bot.strategy.amount,
+      duration: bot.strategy.duration,
       martingale: !!bot.strategy.martingale,
-      martingaleMultiplier: bot.strategy.martingaleMultiplier || 2,
-      maxMartingaleSteps: bot.strategy.maxMartingaleSteps || 4,
-      stopLoss: bot.strategy.stopLoss || 20,
-      takeProfit: bot.strategy.takeProfit || 40,
+      martingaleMultiplier: bot.strategy.martingaleMultiplier,
+      maxMartingaleSteps: bot.strategy.maxMartingaleSteps,
+      stopLoss: bot.strategy.stopLoss,
+      takeProfit: bot.strategy.takeProfit,
     });
     setEditingBotId(bot.id);
     setShowCreator(true);
@@ -234,7 +237,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
         setBots(prev => prev.map(b => b.id === editingBotId ? data[0] : b));
         setShowCreator(false);
         setEditingBotId(null);
-        setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 });
+        setNewBot({ ...BLANK_BOT }); // Reset to blank — admin must configure each new bot explicitly
         alert('✅ Bot configuration updated successfully!');
       }
     } else {
@@ -256,7 +259,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
       if (data && data.length > 0) {
         setBots(prev => [data[0], ...prev.filter(b => b.id !== data[0].id)]);
         setShowCreator(false);
-        setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 });
+        setNewBot({ ...BLANK_BOT }); // Reset to blank — admin must configure each new bot explicitly
         alert('✅ Bot deployed to Supabase and visible to all clients!');
       }
     }
@@ -1100,7 +1103,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
               </div>
 
               <div className="flex gap-3 border-t border-white/5 pt-4">
-                <button onClick={() => { setShowCreator(false); setEditingBotId(null); setNewBot({ name: '', description: '', symbol: 'R_50', contractType: 'DIGITDIFF', amount: 1, duration: 1, martingale: true, martingaleMultiplier: 2, maxMartingaleSteps: 4, stopLoss: 20, takeProfit: 40 }); }}
+                <button onClick={() => { setShowCreator(false); setEditingBotId(null); setNewBot({ ...BLANK_BOT }); }}
                   className="flex-1 py-3 rounded-xl font-bold text-sm text-gray-400 transition-all"
                   style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
                   Cancel

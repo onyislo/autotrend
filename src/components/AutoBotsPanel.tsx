@@ -91,19 +91,21 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
   const [botTakeProfits, setBotTakeProfits] = useState<Record<string, number>>({});
   const [botStopLosses, setBotStopLosses] = useState<Record<string, number>>({});
   const [showCreator, setShowCreator] = useState(false);
-  const [newBotData, setNewBotData] = useState({
+  // Blank form state — admin must explicitly fill every field, nothing pre-assumed
+  const BLANK_BOT_DATA = {
     name: '',
     description: '',
     symbol: 'R_50',
     contractType: 'DIGITDIFF',
     amount: 1,
     duration: 1,
-    martingale: true,
+    martingale: false,
     martingaleMultiplier: 2,
-    maxMartingaleSteps: 4,
-    stopLoss: 20,
-    takeProfit: 40,
-  });
+    maxMartingaleSteps: 3,
+    stopLoss: 10,
+    takeProfit: 20,
+  };
+  const [newBotData, setNewBotData] = useState({ ...BLANK_BOT_DATA });
 
   // Upload-naming modal state
   const [pendingUpload, setPendingUpload] = useState<{
@@ -289,9 +291,8 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
           netProfit += finalProfit;
           totalProfitSum += finalProfit;
           consecutiveLosses = 0;
-          currentStake = strategy.amount;
+          currentStake = strategy.amount; // Reset to admin-configured base stake on win
           addLog(`👍 WIN! Profit: +$${finalProfit.toFixed(2)} | Net: $${netProfit.toFixed(2)}`, 'success');
-          // Show win popup for 2 seconds
           setTradePopup({ type: 'win', amount: finalProfit });
           setTimeout(() => setTradePopup(null), 2000);
         } else {
@@ -300,19 +301,28 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
           totalLossSum += Math.abs(finalProfit);
           consecutiveLosses++;
           addLog(`👎 LOSS! Loss: $${finalProfit.toFixed(2)} | Net: $${netProfit.toFixed(2)}`, 'error');
-          // Show loss popup for 2 seconds
           setTradePopup({ type: 'loss', amount: finalProfit });
           setTimeout(() => setTradePopup(null), 2000);
 
-          if (strategy.martingale && consecutiveLosses <= strategy.maxMartingaleSteps) {
+          // Martingale: all values come strictly from bot.strategy (admin-configured)
+          // Use strict < so exactly maxMartingaleSteps multiplications occur (no off-by-one)
+          if (strategy.martingale && consecutiveLosses < strategy.maxMartingaleSteps) {
             currentStake = currentStake * strategy.martingaleMultiplier;
-            addLog(`Martingale active: Multiplied stake to $${currentStake.toFixed(2)} (Step ${consecutiveLosses})`, 'warning');
+            addLog(
+              `🔁 Martingale Step ${consecutiveLosses}/${strategy.maxMartingaleSteps - 1}: ` +
+              `Stake → $${currentStake.toFixed(2)} (×${strategy.martingaleMultiplier})`,
+              'warning'
+            );
           } else {
             if (strategy.martingale) {
-              addLog('Max Martingale Steps reached. Resetting stake to base amount.', 'warning');
+              addLog(
+                `⚠️ Martingale limit reached (${strategy.maxMartingaleSteps - 1} steps). ` +
+                `Resetting stake to base $${strategy.amount.toFixed(2)}.`,
+                'warning'
+              );
             }
             consecutiveLosses = 0;
-            currentStake = strategy.amount;
+            currentStake = strategy.amount; // Back to admin-configured base stake
           }
         }
 
@@ -471,19 +481,21 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                       const xmlContent = evt.target?.result as string;
                       const symbolMatch = xmlContent?.match(/<field name="SYMBOL_LIST">(.*?)<\/field>/);
                       const purchaseMatch = xmlContent?.match(/<field name="PURCHASE_LIST">(.*?)<\/field>/);
-                      const symbol = symbolMatch ? symbolMatch[1] : 'R_50';
-                      const contractType = purchaseMatch ? purchaseMatch[1] : 'DIGITDIFF';
+                      // Only use parsed values — never fall back to a hardcoded symbol/contract
+                      const symbol = symbolMatch ? symbolMatch[1] : '';
+                      const contractType = purchaseMatch ? purchaseMatch[1] : '';
                       const suggested = file.name.replace(/\.xml$/i, '').toUpperCase();
                       setUploadBotName(suggested);
-                      setUploadBotDesc(`Uploaded bot on ${symbol}.`);
+                      setUploadBotDesc('');
                       setPendingUpload({ symbol, contractType, fileName: file.name });
                     };
                     reader.readAsText(file);
                   } else {
+                    // Non-XML: no symbol/contract can be parsed — admin must select in modal
                     const suggested = file.name.replace(/\.[^.]+$/, '').toUpperCase();
                     setUploadBotName(suggested);
                     setUploadBotDesc('');
-                    setPendingUpload({ symbol: 'R_50', contractType: 'DIGITDIFF', fileName: file.name });
+                    setPendingUpload({ symbol: '', contractType: '', fileName: file.name });
                   }
                   e.target.value = '';
                 }}
@@ -996,6 +1008,39 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                     className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none"
                   />
                 </div>
+                {/* Market symbol — shown always so admin can verify/override what was parsed from XML */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Market Symbol <span className="text-red-500">*</span></label>
+                  <select
+                    value={pendingUpload?.symbol ?? ''}
+                    onChange={(e) => setPendingUpload(p => p ? { ...p, symbol: e.target.value } : p)}
+                    className="w-full border border-gray-200 rounded-xl p-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  >
+                    <option value="">— Select market —</option>
+                    {Object.entries(SYNTHETIC_INDICES).map(([name, symbol]) => (
+                      <option key={symbol} value={symbol}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Contract type — shown always */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Contract Type <span className="text-red-500">*</span></label>
+                  <select
+                    value={pendingUpload?.contractType ?? ''}
+                    onChange={(e) => setPendingUpload(p => p ? { ...p, contractType: e.target.value } : p)}
+                    className="w-full border border-gray-200 rounded-xl p-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  >
+                    <option value="">— Select contract type —</option>
+                    <option value="DIGITDIFF">Digit Differs (DIGITDIFF)</option>
+                    <option value="DIGITMATCH">Digit Matches (DIGITMATCH)</option>
+                    <option value="DIGITOVER">Digit Over (DIGITOVER)</option>
+                    <option value="DIGITUNDER">Digit Under (DIGITUNDER)</option>
+                    <option value="DIGITODD">Digit Odd (DIGITODD)</option>
+                    <option value="DIGITEVEN">Digit Even (DIGITEVEN)</option>
+                    <option value="CALL">Rise (CALL)</option>
+                    <option value="PUT">Fall (PUT)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex gap-3 border-t pt-4">
@@ -1006,7 +1051,7 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                   Cancel
                 </button>
                 <button
-                  disabled={!uploadBotName.trim()}
+                  disabled={!uploadBotName.trim() || !pendingUpload?.symbol || !pendingUpload?.contractType}
                   onClick={async () => {
                     const name = uploadBotName.trim();
                     const description = uploadBotDesc.trim() || `Admin uploaded bot on ${pendingUpload.symbol}.`;
@@ -1047,6 +1092,7 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                       setPendingUpload(null);
                       setUploadBotName('');
                       setUploadBotDesc('');
+                      setNewBotData({ ...BLANK_BOT_DATA }); // Reset to blank after deploy
                       alert(`✅ Bot "${name}" deployed to Supabase and visible to all users!`);
                     }
                   }}
