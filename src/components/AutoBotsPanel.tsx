@@ -39,15 +39,16 @@ interface Props {
   userEmail: string | null;
   userId: string | null;
   onGoToFreeBots?: () => void;
+  onBalanceUpdate?: (profitDelta: number, newExactBalance?: number) => void;
 }
 
-export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoToFreeBots }: Props) {
+export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoToFreeBots, onBalanceUpdate }: Props) {
   const [bots, setBots] = useState<Bot[]>([]);
   const [runningBotId, setRunningBotId] = useState<string | null>(null);
   
   // Bot Runner states
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [stats, setStats] = useState({
+  const statsRef = useRef({
     totalTrades: 0,
     wins: 0,
     losses: 0,
@@ -55,6 +56,12 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
     totalProfit: 0,
     totalLoss: 0,
   });
+  const [stats, setStats] = useState(statsRef.current);
+
+  const updateStats = (newStats: typeof statsRef.current) => {
+    statsRef.current = newStats;
+    setStats(newStats);
+  };
 
   // Trade result popup
   const [tradePopup, setTradePopup] = useState<{ type: 'win' | 'loss'; amount: number } | null>(null);
@@ -155,7 +162,6 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
     isRunningRef.current = true;
     
     setLogs([]);
-    setStats({ totalTrades: 0, wins: 0, losses: 0, netProfit: 0, totalProfit: 0, totalLoss: 0 });
     setTradePopup(null);
     
     addLog(`Initializing ${effectiveBot.name}...`, 'info');
@@ -175,12 +181,13 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
     const { strategy } = bot;
     let currentStake = strategy.amount;
     let consecutiveLosses = 0;
-    let netProfit = 0;
-    let winsCount = 0;
-    let lossesCount = 0;
-    let totalTradesCount = 0;
-    let totalProfitSum = 0;
-    let totalLossSum = 0;
+    // Preserve existing cumulative stats & Net P/L when starting bot
+    let netProfit = statsRef.current.netProfit;
+    let winsCount = statsRef.current.wins;
+    let lossesCount = statsRef.current.losses;
+    let totalTradesCount = statsRef.current.totalTrades;
+    let totalProfitSum = statsRef.current.totalProfit;
+    let totalLossSum = statsRef.current.totalLoss;
 
     try {
       addLog('Connecting to Deriv WebSocket API...', 'info');
@@ -299,7 +306,7 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
         }
 
         // Update display stats
-        setStats({
+        updateStats({
           totalTrades: totalTradesCount,
           wins: winsCount,
           losses: lossesCount,
@@ -307,6 +314,21 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
           totalProfit: totalProfitSum,
           totalLoss: totalLossSum,
         });
+
+        // ⚡ Immediate real-time balance update on screen without refreshing
+        if (onBalanceUpdate) {
+          onBalanceUpdate(finalProfit);
+        }
+
+        // Fetch exact balance from Deriv API WebSocket to ensure 100% precision
+        try {
+          const balRes = await derivAPI.getBalance();
+          if (balRes?.balance?.balance !== undefined) {
+            if (onBalanceUpdate) {
+              onBalanceUpdate(0, Number(balRes.balance.balance));
+            }
+          }
+        } catch { /* ignore */ }
 
         // Insert trade log in database with fallback to localStorage
         let dbUserId = userId;
@@ -554,14 +576,8 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
               {[
                 { label: 'Total Trades', value: stats.totalTrades, icon: History, color: 'text-blue-400', bg: 'bg-blue-500/5 border-blue-500/10' },
                 { label: 'Wins', value: stats.wins, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
-                { label: 'Total Profit', value: `+$${stats.totalProfit.toFixed(2)}`, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
-                {
-                  label: 'Net P&L',
-                  value: `${stats.netProfit >= 0 ? '+' : ''}$${stats.netProfit.toFixed(2)}`,
-                  icon: BarChart3,
-                  color: stats.netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400',
-                  bg: stats.netProfit >= 0 ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'
-                }
+                { label: 'Losses', value: stats.losses, icon: TrendingUp, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10' },
+                { label: 'Total Profit', value: `+$${stats.totalProfit.toFixed(2)}`, icon: BarChart3, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
               ].map((stat) => (
                 <div key={stat.label} className={`rounded-xl border p-4 transition-all ${stat.bg}`}>
                   <div className="flex items-center justify-between mb-2">

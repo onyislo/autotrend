@@ -12,9 +12,10 @@ interface Props {
   wsUrl?: string | null;
   userEmail?: string | null;
   onGoToFreeBots?: () => void;
+  onBalanceUpdate?: (profitDelta: number, newExactBalance?: number) => void;
 }
 
-export default function BotBuilder({ wsToken, wsUrl, userEmail, onGoToFreeBots }: Props) {
+export default function BotBuilder({ wsToken, wsUrl, userEmail, onGoToFreeBots, onBalanceUpdate }: Props) {
   // Pass wsToken or fallback to empty string
   return (
     <div className="flex flex-col w-full h-full bg-gray-50 overflow-hidden">
@@ -25,6 +26,7 @@ export default function BotBuilder({ wsToken, wsUrl, userEmail, onGoToFreeBots }
           userEmail={userEmail ?? null}
           userId={null}
           onGoToFreeBots={onGoToFreeBots}
+          onBalanceUpdate={onBalanceUpdate}
         />
       </div>
     </div>

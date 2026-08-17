@@ -86,7 +86,7 @@ function generateSignals(): Signal[] {
 }
 
 // ── Signal Modal ──────────────────────────────────────────────────────────────
-function SignalModal({ signal, wsToken, wsUrl, onClose }: { signal: Signal; wsToken: string | null; wsUrl: string | null; onClose: () => void }) {
+function SignalModal({ signal, wsToken, wsUrl, onClose, onBalanceUpdate }: { signal: Signal; wsToken: string | null; wsUrl: string | null; onClose: () => void; onBalanceUpdate?: (profitDelta: number, newExactBalance?: number) => void }) {
   const [settings, setSettings] = useState<TradeSettings>({ stake: '0.5', takeProfit: '4', stopLoss: '30', consecutiveLosses: '3', martingale: '2' });
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState('');
@@ -140,6 +140,9 @@ function SignalModal({ signal, wsToken, wsUrl, onClose }: { signal: Signal; wsTo
         if (data.error) { setStatus(`❌ ${data.error.message}`); stopBot(); return; }
         if (data.buy?.profit !== undefined) {
           const profit = parseFloat(data.buy.profit);
+          if (onBalanceUpdate) {
+            onBalanceUpdate(profit);
+          }
           if (profit > 0) {
             setWins(w => { const nw = w + 1; consecutiveLossCount.current = 0; currentStake.current = baseStake; if (nw >= maxWins) { setStatus(`🎉 Take profit reached! ${nw} wins.`); stopBot(); return nw; } setStatus(`✅ Win #${nw}! +$${profit.toFixed(2)}`); setTimeout(() => placeTrade(ws, currentStake.current), 500); return nw; });
           } else {
@@ -149,7 +152,7 @@ function SignalModal({ signal, wsToken, wsUrl, onClose }: { signal: Signal; wsTo
       }
     };
     ws.onerror = () => { setStatus('❌ Connection error'); stopBot(); };
-  }, [settings, wsToken, wsUrl, placeTrade, stopBot]);
+  }, [settings, wsToken, wsUrl, placeTrade, stopBot, onBalanceUpdate]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
@@ -427,6 +430,8 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
     } catch {}
   }, [accountMode]);
 
+  const [balanceOverrides, setBalanceOverrides] = useState<Record<string, number>>({});
+
   // Strict account resolution — NEVER fallback Demo account under Real mode
   const storedAuth = getUserData();
   const accountsList: Array<{ account_id?: string; account_type?: string; balance?: number | string; currency?: string; loginid?: string }> =
@@ -439,10 +444,53 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
   const demoAccount = accountsList.find(a => a.account_type === 'demo' || a.account_type === 'virtual');
   
   // Strict mode: if accountMode is 'real', ONLY return realAccount (never fallback to demoAccount)
-  const currentAccount = accountMode === 'real' ? realAccount : demoAccount;
+  const rawCurrentAccount = accountMode === 'real' ? realAccount : demoAccount;
   const isRealMode = accountMode === 'real';
-  const currentAccountId = currentAccount?.account_id ?? currentAccount?.loginid ?? null;
+  const currentAccountId = rawCurrentAccount?.account_id ?? rawCurrentAccount?.loginid ?? null;
   const clientToken = storedAuth?.access_token;
+
+  const currentAccount = rawCurrentAccount ? {
+    ...rawCurrentAccount,
+    balance: currentAccountId && balanceOverrides[currentAccountId] !== undefined
+      ? balanceOverrides[currentAccountId]
+      : (rawCurrentAccount.balance ?? 0)
+  } : null;
+
+  // Real-time balance updater — 0ms latency, no page refresh required
+  const handleUpdateBalance = useCallback((profitDelta: number, exactBalance?: number) => {
+    const targetId = currentAccountId || storedAuth?.account;
+    if (!targetId) return;
+
+    setBalanceOverrides(prev => {
+      let currentVal = prev[targetId];
+      if (currentVal === undefined) {
+        const found = session?.accounts?.find(a => (a.account_id || a.loginid) === targetId);
+        currentVal = Number(found?.balance ?? 0);
+      }
+      const nextBal = exactBalance !== undefined ? exactBalance : (currentVal + profitDelta);
+
+      // Also sync session state if present
+      setSession(sPrev => {
+        if (!sPrev || !sPrev.accounts) return sPrev;
+        const updated = sPrev.accounts.map(acc => {
+          const id = acc.account_id || acc.loginid;
+          if (id === targetId) {
+            return { ...acc, balance: nextBal };
+          }
+          return acc;
+        });
+        return { ...sPrev, accounts: updated };
+      });
+
+      // Sync updated balance to Supabase database for admin view
+      syncDerivUserToSupabase({
+        account_id: targetId,
+        balance: nextBal,
+      });
+
+      return { ...prev, [targetId]: nextBal };
+    });
+  }, [currentAccountId, session, storedAuth]);
 
   // Sync Deriv user to Supabase on login so admin can see all site users
   useEffect(() => {
@@ -524,7 +572,7 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {selectedSignal && <SignalModal signal={selectedSignal} wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} onClose={() => setSelectedSignal(null)} />}
+      {selectedSignal && <SignalModal signal={selectedSignal} wsToken={session?.wsToken ?? null} wsUrl={session?.wsUrl ?? null} onClose={() => setSelectedSignal(null)} onBalanceUpdate={handleUpdateBalance} />}
 
       {/* Top Navbar */}
       <nav className="bg-gray-900 text-white sticky top-0 z-40 shadow-lg h-14 flex items-center px-4 gap-3">
@@ -822,7 +870,7 @@ export default function Dashboard({ adminEmail }: DashboardProps = {}) {
 
           {/* Free Bots — Keep mounted but hidden so the trading loops and states are not lost when switching tabs */}
           <div className={activeTab === 'freebots' ? 'block' : 'hidden'}>
-            <FreeBotsPanel wsToken={session?.wsToken} wsUrl={session?.wsUrl} adminEmail={adminEmail} userId={currentAccountId} />
+            <FreeBotsPanel wsToken={session?.wsToken} wsUrl={session?.wsUrl} adminEmail={adminEmail} userId={currentAccountId} onBalanceUpdate={handleUpdateBalance} />
           </div>
 
           {activeTab === 'tradehistory' && (
