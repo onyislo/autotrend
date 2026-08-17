@@ -4,34 +4,6 @@ import { Pause, Plus, BarChart3, TrendingUp, Cpu, History, Trash2, Upload } from
 import { derivAPI, SYNTHETIC_INDICES } from '../lib/derivAPI';
 import { supabase } from '../lib/supabase';
 
-const getLocalAdminBots = (): Bot[] => {
-  try {
-    const raw = localStorage.getItem('autotrendx_admin_bots');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveLocalAdminBot = (bot: Bot) => {
-  try {
-    const existing = getLocalAdminBots();
-    const updated = [bot, ...existing.filter(b => b.id !== bot.id)];
-    localStorage.setItem('autotrendx_admin_bots', JSON.stringify(updated));
-  } catch (e) {
-    console.error('Failed to save local admin bot:', e);
-  }
-};
-
-const removeLocalAdminBot = (botId: string) => {
-  try {
-    const existing = getLocalAdminBots();
-    const updated = existing.filter(b => b.id !== botId);
-    localStorage.setItem('autotrendx_admin_bots', JSON.stringify(updated));
-  } catch (e) {
-    console.error('Failed to remove local admin bot:', e);
-  }
-};
 
 interface BotStrategy {
   symbol: string;

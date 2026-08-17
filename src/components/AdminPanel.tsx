@@ -104,22 +104,6 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
     } catch {}
   };
 
-  const handleSaveLocalBot = (botItem: BotItem) => {
-    try {
-      const raw = localStorage.getItem('autotrendx_admin_bots');
-      const existing: BotItem[] = raw ? JSON.parse(raw) : [];
-      const updated = [botItem, ...existing.filter(b => b.id !== botItem.id)];
-      localStorage.setItem('autotrendx_admin_bots', JSON.stringify(updated));
-    } catch {}
-  };
-
-  const handleRemoveLocalBot = (botId: string) => {
-    try {
-      const raw = localStorage.getItem('autotrendx_admin_bots');
-      const existing: BotItem[] = raw ? JSON.parse(raw) : [];
-      localStorage.setItem('autotrendx_admin_bots', JSON.stringify(existing.filter(b => b.id !== botId)));
-    } catch {}
-  };
 
   const handleXmlUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
