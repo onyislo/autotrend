@@ -581,18 +581,19 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
             </div>
 
             {/* Live Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 relative z-10">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10">
               {[
+                { label: 'Total Profits', value: `+$${stats.totalProfit.toFixed(2)}`, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
                 { label: 'Total Trades', value: stats.totalTrades, icon: History, color: 'text-blue-400', bg: 'bg-blue-500/5 border-blue-500/10' },
                 { label: 'Wins', value: stats.wins, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
                 { label: 'Losses', value: stats.losses, icon: TrendingUp, color: 'text-rose-400', bg: 'bg-rose-500/5 border-rose-500/10' },
               ].map((stat) => (
-                <div key={stat.label} className={`rounded-xl border p-4 transition-all ${stat.bg}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{stat.label}</span>
-                    <stat.icon size={16} className={stat.color} />
+                <div key={stat.label} className={`rounded-xl border p-3.5 transition-all ${stat.bg}`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{stat.label}</span>
+                    <stat.icon size={14} className={stat.color} />
                   </div>
-                  <p className={`text-2xl font-black font-mono tracking-tight ${stat.color}`}>{stat.value}</p>
+                  <p className={`text-xl font-black font-mono tracking-tight ${stat.color}`}>{stat.value}</p>
                 </div>
               ))}
             </div>
@@ -705,14 +706,14 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                         <span className="font-extrabold text-rose-500 text-xs">${bot.strategy.stopLoss}</span>
                       </div>
                       <div>
-                        <span className="block text-gray-400 mb-0.5 font-bold uppercase tracking-wider">Take Profit</span>
+                        <span className="block text-gray-400 mb-0.5 font-bold uppercase tracking-wider">Total Profits Target</span>
                         <span className="font-extrabold text-emerald-500 text-xs">${bot.strategy.takeProfit}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-6">
-                    {/* Adjustable inputs — stake, take profit, stop loss */}
+                    {/* Adjustable inputs — stake, total profits target, stop loss */}
                     {!isThisBotRunning && (
                       <div className="mb-3 grid grid-cols-3 gap-2">
                         <div>
@@ -723,18 +724,21 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                             step={0.01}
                             value={botStakes[bot.id] ?? bot.strategy.amount}
                             onChange={(e) => setBotStakes(prev => ({ ...prev, [bot.id]: Number(e.target.value) }))}
-                            className="w-full border border-gray-200 rounded-xl px-2 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                            className="w-full border border-gray-200 rounded-xl px-2 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-400 font-bold"
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">Take Profit ($)</label>
+                          <label className="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1 flex items-center justify-between">
+                            Total Profits ($)
+                          </label>
                           <input
                             type="number"
                             min={1}
                             step={0.5}
                             value={botTakeProfits[bot.id] ?? bot.strategy.takeProfit}
                             onChange={(e) => setBotTakeProfits(prev => ({ ...prev, [bot.id]: Number(e.target.value) }))}
-                            className="w-full border border-emerald-200 rounded-xl px-2 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                            className="w-full border border-emerald-300 bg-emerald-50/30 rounded-xl px-2 py-2 text-xs font-mono font-extrabold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            title="Set target Total Profit limit before bot stops"
                           />
                         </div>
                         <div>
@@ -883,7 +887,7 @@ export default function AutoBotsPanel({ wsToken, wsUrl, userEmail, userId, onGoT
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Take Profit ($)</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Total Profits Target ($)</label>
                     <input
                       type="number"
                       value={newBotData.takeProfit}

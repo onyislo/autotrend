@@ -211,7 +211,7 @@ function BotCreator({ onClose, onSave }: { onClose: () => void, onSave: (bot: an
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Take Profit ($)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Total Profits Target ($)</label>
               <input
                 type="number"
                 value={botData.takeProfit}

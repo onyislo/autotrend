@@ -693,7 +693,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
                       <div><span className="block text-gray-600 uppercase mb-0.5">Type</span><span className="font-bold text-sky-400">{bot.strategy.contractType}</span></div>
                       <div><span className="block text-gray-600 uppercase mb-0.5">Martingale</span><span className="font-bold text-white">{bot.strategy.martingale ? `${bot.strategy.martingaleMultiplier}×` : 'Off'}</span></div>
                       <div><span className="block text-gray-600 uppercase mb-0.5">SL</span><span className="font-bold text-red-400">${bot.strategy.stopLoss}</span></div>
-                      <div><span className="block text-gray-600 uppercase mb-0.5">TP</span><span className="font-bold text-green-400">${bot.strategy.takeProfit}</span></div>
+                      <div><span className="block text-gray-600 uppercase mb-0.5" title="Total Profits Target">Total Profit</span><span className="font-bold text-green-400">${bot.strategy.takeProfit}</span></div>
                     </div>
                   </div>
 
@@ -1047,7 +1047,7 @@ export default function AdminPanel({ adminEmail = 'admin@autotrendx.co.ke', onLo
                     { label: 'Base Stake ($)', key: 'amount', min: 0.35, step: '0.01' },
                     { label: 'Duration (Ticks)', key: 'duration', min: 1, max: 10 },
                     { label: 'Stop Loss ($)', key: 'stopLoss', min: 1 },
-                    { label: 'Take Profit ($)', key: 'takeProfit', min: 1 },
+                    { label: 'Total Profits Target ($)', key: 'takeProfit', min: 1 },
                   ].map(({ label, key, min, max, step }) => (
                     <div key={key}>
                       <label className="block text-[10px] font-extrabold uppercase tracking-widest text-gray-500 mb-1.5">{label}</label>
